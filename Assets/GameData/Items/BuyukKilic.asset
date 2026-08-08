@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fff87811ae0b812418c54195e1868f5c, type: 3}
+  m_Name: BuyukKilic
+  m_EditorClassIdentifier: Assembly-CSharp::ItemSO
+  itemName: "B\xFCy\xFCk K\u0131l\u0131\xE7"
+  description: "Yava\u015F ama \xE7ok g\xFC\xE7l\xFC iki elli dev k\u0131l\u0131\xE7.
+    F\u0131rlat\u0131lamaz. (1x4)"
+  icon: {fileID: 0}
+  gridWidth: 1
+  gridHeight: 4
+  itemType: 1
+  maxStack: 1
+  maxDurability: 50
+  meleeDamage: 30
+  meleeRange: 2.1
+  attackCooldown: 0.9
+  swingArcAngle: 110
+  canMeleeAttack: 1
+  isThrowable: 0
+  throwStyle: 0
+  throwDamage: 0
+  pierceCount: 0
+  throwDurabilityCost: 3
+  throwForce: 10
+  armorValue: 0
+  armorSlotType: 0
+  weightAccelTime: 0
+  weightDecelTime: 0
+  maxArrowCapacity: 10
+  spellDamage: 0
+  spellAoeRadius: 0
+  chainCount: 0
+  spellRange: 8
+  appliesSlowOnHit: 0
+  leavesFireArea: 0
+  createsLightOnLand: 0

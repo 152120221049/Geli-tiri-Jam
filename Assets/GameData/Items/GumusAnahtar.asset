@@ -14,9 +14,32 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemSO
   itemName: "G\xFCm\xFC\u015F Anahtar"
   description: "Zindan kap\u0131s\u0131n\u0131 a\xE7an antik bir anahtar."
-  icon: {fileID: 0}
+  icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
   gridWidth: 1
   gridHeight: 1
   itemType: 2
   maxStack: 1
   maxDurability: 0
+  meleeDamage: 0
+  meleeRange: 1
+  attackCooldown: 0.5
+  swingArcAngle: 60
+  canMeleeAttack: 0
+  isThrowable: 0
+  throwStyle: 0
+  throwDamage: 0
+  pierceCount: 0
+  throwDurabilityCost: 3
+  throwForce: 10
+  armorValue: 0
+  armorSlotType: 0
+  weightAccelTime: 0
+  weightDecelTime: 0
+  maxArrowCapacity: 10
+  spellDamage: 0
+  spellAoeRadius: 0
+  chainCount: 0
+  spellRange: 8
+  appliesSlowOnHit: 0
+  leavesFireArea: 0
+  createsLightOnLand: 0
