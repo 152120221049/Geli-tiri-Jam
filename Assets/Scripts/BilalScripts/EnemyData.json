@@ -1,5 +1,5 @@
 {
-  "Enemies": [/*animasyonlar gelecek sen arayüzden çekmek üzerine yap null değillerse çağır liste olarak*/
+  "Enemies": [
     {
       "EnemyType": 1,
       "Name": "Minik Canavar",
