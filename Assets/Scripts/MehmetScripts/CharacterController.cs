@@ -79,10 +79,11 @@ namespace MemoScripts
             horizontalInput = 0f;
             isRunning = false;
 
-            // Envanter açıkken veya açılmak için tuşa basılı tutulurken hareketi durdur
-            if (blockMovementWhenInventoryIsOpen && InventoryManager.Instance != null)
+            // Envanter açıkken, açılmak için tuşa basılı tutulurken veya Not okunurken hareketi durdur
+            if (blockMovementWhenInventoryIsOpen)
             {
-                if (InventoryManager.Instance.IsInventoryOpen || InventoryManager.Instance.IsHoldingToOpen)
+                if ((InventoryManager.Instance != null && (InventoryManager.Instance.IsInventoryOpen || InventoryManager.Instance.IsHoldingToOpen)) ||
+                    (NoteUI.Instance != null && NoteUI.Instance.IsReadingNote))
                 {
                     return;
                 }

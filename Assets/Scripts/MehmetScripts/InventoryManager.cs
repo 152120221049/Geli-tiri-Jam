@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// Ana envanter ve Hotbar yöneticisi.
@@ -228,7 +229,16 @@ public class InventoryManager : MonoBehaviour
     /// </summary>
     public void UseItem(InventoryItem item)
     {
-        if (item == null || !item.CanUse()) return;
+        if (item == null) return;
+
+        // Anahtar eşyaları (KeyItem) doğrudan kullanılamaz — envanterden kullanmaya basılırsa yere atılır
+        if (item.itemData != null && item.itemData.itemType == ItemType.KeyItem)
+        {
+            DropItemToWorld(item);
+            return;
+        }
+
+        if (!item.CanUse()) return;
 
         bool depleted = item.Use();
         OnItemUsed?.Invoke(item);
@@ -242,11 +252,44 @@ public class InventoryManager : MonoBehaviour
     }
 
     /// <summary>Eşyayı hem envanterden hem hotbar'dan tamamen kaldırır.</summary>
-    private void RemoveItemCompletely(InventoryItem item)
+    public void RemoveItemCompletely(InventoryItem item)
     {
         InventoryGrid.RemoveItem(item);
         HotbarGrid.RemoveItem(item);
         OnItemRemoved?.Invoke(item);
+    }
+
+    /// <summary>Eşyayı dünyada oyuncunun yakınına yere atar (WorldItem olarak spawn eder).</summary>
+    public bool DropItemToWorld(InventoryItem item)
+    {
+        if (item == null || item.itemData == null) return false;
+
+        Transform pTrans = null;
+        GameObject pObj = GameObject.FindGameObjectWithTag("Player");
+        if (pObj != null) pTrans = pObj.transform;
+
+        Vector3 dropPos = (pTrans != null) 
+            ? pTrans.position + new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), 0.2f, 0) 
+            : Vector3.zero;
+
+        // WorldItem GameObject oluştur
+        GameObject worldItemObj = new GameObject($"WorldItem_{item.itemData.itemName}");
+        worldItemObj.transform.position = dropPos;
+
+        SpriteRenderer sr = worldItemObj.AddComponent<SpriteRenderer>();
+        sr.sprite = item.itemData.icon;
+        sr.sortingOrder = 5;
+
+        BoxCollider2D col = worldItemObj.AddComponent<BoxCollider2D>();
+        col.isTrigger = true;
+
+        WorldItem wItem = worldItemObj.AddComponent<WorldItem>();
+        wItem.Setup(item.itemData, item.currentStack);
+
+        RemoveItemCompletely(item);
+        OnInventoryChanged?.Invoke();
+        Debug.Log($"🗑️ {item.itemData.itemName} x{item.currentStack} yere atıldı!");
+        return true;
     }
 
     // ═══════════════════════════════════════════
@@ -370,6 +413,84 @@ public class InventoryManager : MonoBehaviour
         }
 
         return false;
+    }
+
+    /// <summary>Envanterde veya Hotbar'da belirtilen eşyadan en az belirtilen miktarda var mı kontrol eder.</summary>
+    public bool HasItem(ItemSO itemData, int amount = 1)
+    {
+        if (itemData == null) return false;
+        int count = 0;
+
+        foreach (var item in HotbarGrid.GetAllItems())
+        {
+            if (item.itemData == itemData)
+            {
+                count += item.currentStack;
+                if (count >= amount) return true;
+            }
+        }
+
+        foreach (var item in InventoryGrid.GetAllItems())
+        {
+            if (item.itemData == itemData)
+            {
+                count += item.currentStack;
+                if (count >= amount) return true;
+            }
+        }
+
+        return count >= amount;
+    }
+
+    /// <summary>Envanterden ve Hotbar'dan belirtilen eşyadan istenen miktarda eksiltir.</summary>
+    public bool RemoveItem(ItemSO itemData, int amount = 1)
+    {
+        if (!HasItem(itemData, amount)) return false;
+        int remainingToRemove = amount;
+
+        // Önce Hotbar'dan eksilt
+        var hotbarItems = new List<InventoryItem>(HotbarGrid.GetAllItems());
+        foreach (var item in hotbarItems)
+        {
+            if (item.itemData == itemData)
+            {
+                int deduct = Mathf.Min(remainingToRemove, item.currentStack);
+                item.currentStack -= deduct;
+                remainingToRemove -= deduct;
+
+                if (item.currentStack <= 0)
+                {
+                    HotbarGrid.RemoveItem(item);
+                }
+
+                if (remainingToRemove <= 0) break;
+            }
+        }
+
+        // Kalan varsa envanterden eksilt
+        if (remainingToRemove > 0)
+        {
+            var invItems = new List<InventoryItem>(InventoryGrid.GetAllItems());
+            foreach (var item in invItems)
+            {
+                if (item.itemData == itemData)
+                {
+                    int deduct = Mathf.Min(remainingToRemove, item.currentStack);
+                    item.currentStack -= deduct;
+                    remainingToRemove -= deduct;
+
+                    if (item.currentStack <= 0)
+                    {
+                        InventoryGrid.RemoveItem(item);
+                    }
+
+                    if (remainingToRemove <= 0) break;
+                }
+            }
+        }
+
+        OnInventoryChanged?.Invoke();
+        return true;
     }
 
     /// <summary>Eşyayı Hotbar'dan Envantere hızlıca geri taşır (Sağ tık).</summary>
