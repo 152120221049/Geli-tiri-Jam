@@ -1,0 +1,51 @@
+{
+  "Enemies": [/*animasyonlar gelecek sen arayüzden çekmek üzerine yap null değillerse çağır liste olarak*/
+    {
+      "EnemyType": 1,
+      "Name": "Minik Canavar",
+      "Health": 5,
+      "Damage": 10,
+      "MinSpeed": 4,
+      "MaxSpeed": 10,
+      "Behavior": "Stackable",
+      "Animations": {
+        "Run": "",
+        "Idle": "",
+        "Attack": "",
+        "Die": ""
+      },
+      "VisualPrefabPath": ""
+    },
+    {
+      "EnemyType": 2,
+      "Name": "Orta Boss",
+      "Health": 100,
+      "Damage": 30,
+      "MinSpeed": 5,
+      "MaxSpeed": 10,
+      "Behavior": "ChasePlayer",
+      "Animations": {
+        "Run": "",
+        "Idle": "",
+        "Attack": "",
+        "TakeDamage": ""
+      },
+      "VisualPrefabPath": ""
+    },
+    {
+      "EnemyType": 3,
+      "Name": "Yenilmez Boss",
+      "Health": 999999,
+      "Damage": 100,
+      "MinSpeed": 0,
+      "MaxSpeed": 0,
+      "Behavior": "FrontalAttack",
+      "AttackCooldown": 5.0,
+      "Animations": {
+        "Idle": "",
+        "Attack": ""
+      },
+      "VisualPrefabPath": ""
+    }
+  ]
+}

@@ -5,21 +5,81 @@ using TMPro;
 
 public class Dialogs : MonoBehaviour
 {
+    // Singleton yapısı sayesinde diğer scriptlerden (NPCInteractable) kolayca erişilir
+    public static Dialogs Instance;
+
     [Header("Data")]
     [Tooltip("data.json dosyasını Inspector'dan buraya sürükleyin")]
     public TextAsset dialogDataFile;
 
-    [Header("UI Referansları")]
-    public TextMeshProUGUI dialogTextDisplay;
+    [Header("Player UI Referansları")]
+    [Tooltip("Oyuncunun kendi konuşma baloncuğu (NPC'ninki gibi). Atanmazsa otomatik bulunmaya çalışılır.")]
+    public GameObject playerBubbleObj;
+    
+    [Tooltip("Oyuncunun kendi metin objesi (3D TextMeshPro). Atanmazsa otomatik bulunmaya çalışılır.")]
+    public TextMeshPro playerTextDisplay;
 
     // Veri yapımız: [NpcTag] -> [Tipi (npcDialog/playerDialog)] -> [ID] -> [Metin]
     private Dictionary<string, Dictionary<string, Dictionary<string, string>>> parsedData = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>();
+
+    // Durum takibi
+    private bool isDialogActive = false;
+    private string currentNpcTag = "";
+    private string currentNpcDialogId = "";
+    
+    private bool waitingForOption = false;
+    private bool showingPlayerText = false;
+
+    // Şu an aktif olan NPC'nin lokal UI referansları
+    private TextMeshPro currentTextDisplay;
+    private GameObject currentBubbleObj;
+
+    // Klavyeden seçilebilecek aktif opsiyonlar
+    private List<KeyValuePair<string, string>> activeOptions = new List<KeyValuePair<string, string>>();
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    public bool IsDialogActive()
+    {
+        return isDialogActive;
+    }
 
     void Start()
     {
         if (dialogDataFile != null)
         {
             ParseJsonManually(dialogDataFile.text);
+        }
+
+        // Eğer Inspector'dan Player Text atanmadıysa, otomatik bul
+        if (playerTextDisplay == null)
+        {
+            playerTextDisplay = GetComponentInChildren<TextMeshPro>(true);
+        }
+
+        // Eğer Player Bubble atanmadıysa Text'in parent'ını al
+        if (playerBubbleObj == null && playerTextDisplay != null && playerTextDisplay.transform.parent != null)
+        {
+            if (playerTextDisplay.transform.parent != this.transform)
+            {
+                playerBubbleObj = playerTextDisplay.transform.parent.gameObject;
+            }
+        }
+
+        // Oyun başlarken oyuncunun baloncuğunu gizle
+        if (playerBubbleObj != null)
+        {
+            playerBubbleObj.SetActive(false);
         }
     }
 
@@ -32,16 +92,13 @@ public class Dialogs : MonoBehaviour
         string currentNpc = "";
         string currentType = "";
 
-        // Satır satır okuyarak regex ile ayıklıyoruz
         string[] lines = json.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
         
         foreach (string line in lines)
         {
-            // npcDialog veya playerDialog bloğuna girdik mi?
             if (line.Contains("\"npcDialog\"")) { currentType = "npcDialog"; continue; }
             if (line.Contains("\"playerDialog\"")) { currentType = "playerDialog"; continue; }
             
-            // Yeni bir NPC tag'ı mı başlıyor? (Örn: "npc1": { )
             var npcMatch = Regex.Match(line, @"\""([^\""]+)\""\s*:\s*\{");
             if (npcMatch.Success && !line.Contains("npcDialog") && !line.Contains("playerDialog"))
             {
@@ -55,7 +112,6 @@ public class Dialogs : MonoBehaviour
                 continue;
             }
 
-            // Diyalog metinlerini yakala (Örn: "1": "Greetings...") veya ("1A": "Hello...")
             var dialogMatch = Regex.Match(line, @"\""([^\""]+)\""\s*:\s*\""([^\""]+)\""");
             if (dialogMatch.Success && !string.IsNullOrEmpty(currentNpc) && !string.IsNullOrEmpty(currentType))
             {
@@ -67,9 +123,9 @@ public class Dialogs : MonoBehaviour
     }
 
     /// <summary>
-    /// npcTag vererek NPC'nin ilk cümlesi ("1") ile konuşmayı başlatır.
+    /// npcTag vererek NPC'nin ilk cümlesi ("1") ile konuşmayı başlatır. NPC'nin lokal Text ve Bubble objelerini alır.
     /// </summary>
-    public void StartDialog(string npcTag)
+    public void StartDialog(string npcTag, TextMeshPro textObj, GameObject bubbleObj)
     {
         if (dialogDataFile == null)
         {
@@ -82,63 +138,192 @@ public class Dialogs : MonoBehaviour
             ParseJsonManually(dialogDataFile.text);
         }
 
-        // Başlangıç diyalog ID'sini "1" olarak varsayıyoruz
-        ShowNpcDialog(npcTag, "1");
+        currentNpcTag = npcTag;
+        currentTextDisplay = textObj;
+        currentBubbleObj = bubbleObj;
+        
+        isDialogActive = true;
+        waitingForOption = false;
+        showingPlayerText = false;
+        
+        // Zamanı durdur
+        Time.timeScale = 0f;
+
+        // Player baloncuğu açıksa kapat
+        if (playerBubbleObj != null) playerBubbleObj.SetActive(false);
+
+        // NPC baloncuğunu aç
+        if (currentBubbleObj != null) currentBubbleObj.SetActive(true);
+
+        ShowNpcDialog("1");
     }
 
     /// <summary>
     /// Belirtilen NPC'nin belirtilen ID'li diyaloğunu gösterir.
     /// </summary>
-    public void ShowNpcDialog(string npcTag, string dialogId)
+    private void ShowNpcDialog(string dialogId)
     {
-        if (parsedData.ContainsKey(npcTag) && parsedData[npcTag]["npcDialog"].ContainsKey(dialogId))
-        {
-            string text = parsedData[npcTag]["npcDialog"][dialogId];
-            
-            // Ekrana yansıt
-            if (dialogTextDisplay != null) 
-                dialogTextDisplay.text = text;
-            
-            Debug.Log($"[NPC - {npcTag}]: {text}");
+        currentNpcDialogId = dialogId;
+        showingPlayerText = false;
+        activeOptions.Clear();
 
-            // Bu cümlenin ardından oyuncunun verebileceği cevaplar (1A, 1B vb.) var mı kontrol et
-            CheckPlayerOptions(npcTag, dialogId);
+        if (parsedData.ContainsKey(currentNpcTag) && parsedData[currentNpcTag]["npcDialog"].ContainsKey(dialogId))
+        {
+            string text = parsedData[currentNpcTag]["npcDialog"][dialogId];
+            
+            // Seçenekleri kontrol et ve metne ekle
+            text += CheckPlayerOptions(dialogId);
+
+            if (currentTextDisplay != null) 
+                currentTextDisplay.text = text;
         }
         else
         {
-            Debug.LogWarning($"Diyalog bulunamadı: NPC={npcTag}, ID={dialogId}");
+            // Diyalog bittiyse kapat
+            EndDialog();
         }
     }
 
     /// <summary>
-    /// Oyuncunun o anki NPC cümlesine verebileceği cevapları bulur.
+    /// Oyuncunun o anki NPC cümlesine verebileceği cevapları bulur ve ekrana yazdırılmak üzere string olarak döndürür.
+    /// Aynı zamanda activeOptions listesini doldurur.
     /// </summary>
-    private void CheckPlayerOptions(string npcTag, string npcDialogId)
+    private string CheckPlayerOptions(string npcDialogId)
     {
-        if (!parsedData.ContainsKey(npcTag) || !parsedData[npcTag].ContainsKey("playerDialog")) return;
+        waitingForOption = false;
+        activeOptions.Clear();
 
-        var playerDialogs = parsedData[npcTag]["playerDialog"];
-        bool hasOptions = false;
+        if (!parsedData.ContainsKey(currentNpcTag) || !parsedData[currentNpcTag].ContainsKey("playerDialog")) return "";
+
+        var playerDialogs = parsedData[currentNpcTag]["playerDialog"];
 
         foreach (var kvp in playerDialogs)
         {
-            // Örneğin NPC "1" no'lu cümleyi kurduysa, oyuncunun seçenekleri "1A", "1B" şeklinde başlamalı.
             if (kvp.Key.StartsWith(npcDialogId) && kvp.Key.Length > npcDialogId.Length)
             {
-                hasOptions = true;
-                Debug.Log($"Oyuncu Seçeneği [{kvp.Key}]: {kvp.Value}");
+                activeOptions.Add(kvp);
             }
         }
 
-        if (!hasOptions)
+        if (activeOptions.Count > 0)
         {
-            // Eğer oyuncunun seçeceği bir cevap yoksa, NPC'nin sonraki cümlesine (Örn: "1"den "2"ye) devam edip etmediğine bak.
-            if (int.TryParse(npcDialogId, out int nextIdInt))
+            waitingForOption = true; // Oyuncunun klavyeden seçim yapmasını bekleyeceğiz
+            
+            string optionsString = "\n\n"; // NPC'nin cümlesinden sonra biraz boşluk bırak
+
+            for (int i = 0; i < activeOptions.Count; i++)
             {
-                string nextId = (nextIdInt + 1).ToString();
-                if (parsedData[npcTag]["npcDialog"].ContainsKey(nextId))
+                var option = activeOptions[i];
+                // 1- Seçenek 1
+                // 2- Seçenek 2
+                optionsString += $"<color=#f9a03f>{i + 1}-</color> {option.Value}\n";
+            }
+
+            return optionsString;
+        }
+        
+        return "";
+    }
+
+    /// <summary>
+    /// Klavyeden numara tuşuna basıldığında ilgili seçeneği işler.
+    /// </summary>
+    private void OnOptionSelected(int index)
+    {
+        if (index < 0 || index >= activeOptions.Count) return;
+
+        var selectedOption = activeOptions[index];
+        
+        waitingForOption = false;
+        showingPlayerText = true;
+
+        // NPC'nin baloncuğunu gizleyip, Oyuncunun baloncuğunu gösteriyoruz
+        if (currentBubbleObj != null) currentBubbleObj.SetActive(false);
+        if (playerBubbleObj != null) playerBubbleObj.SetActive(true);
+
+        if (playerTextDisplay != null)
+        {
+            playerTextDisplay.text = selectedOption.Value;
+        }
+        else if (currentTextDisplay != null) // Fallback: Eğer player texti yoksa npc'ninkine yaz
+        {
+            if (currentBubbleObj != null) currentBubbleObj.SetActive(true);
+            currentTextDisplay.text = "<color=#a4e767>Oyuncu:</color>\n" + selectedOption.Value;
+        }
+
+        // Oyuncu cümlesini gösterdik, bir sonraki ID'yi belirliyoruz (Örn "1" idi, seçtiği "1A" oldu, şimdi "2" ye geçecek)
+        if (int.TryParse(currentNpcDialogId, out int currentIdInt))
+        {
+            currentNpcDialogId = (currentIdInt + 1).ToString();
+        }
+    }
+
+    /// <summary>
+    /// Diyaloğu tamamen sonlandırır ve oyunu devam ettirir.
+    /// </summary>
+    private void EndDialog()
+    {
+        isDialogActive = false;
+        Time.timeScale = 1f; // Zamanı geri başlat
+
+        if (currentBubbleObj != null) currentBubbleObj.SetActive(false);
+        if (playerBubbleObj != null) playerBubbleObj.SetActive(false);
+        
+        currentBubbleObj = null;
+        currentTextDisplay = null;
+        
+        Debug.Log("Diyalog sona erdi, oyun devam ediyor.");
+    }
+
+    void Update()
+    {
+        if (!isDialogActive) return;
+
+        // Eğer seçenek bekliyorsak klavyeden giriş kontrol et
+        if (waitingForOption)
+        {
+            if (UnityEngine.InputSystem.Keyboard.current == null) return;
+
+            if (UnityEngine.InputSystem.Keyboard.current.digit1Key.wasPressedThisFrame || UnityEngine.InputSystem.Keyboard.current.numpad1Key.wasPressedThisFrame) OnOptionSelected(0);
+            else if (UnityEngine.InputSystem.Keyboard.current.digit2Key.wasPressedThisFrame || UnityEngine.InputSystem.Keyboard.current.numpad2Key.wasPressedThisFrame) OnOptionSelected(1);
+            else if (UnityEngine.InputSystem.Keyboard.current.digit3Key.wasPressedThisFrame || UnityEngine.InputSystem.Keyboard.current.numpad3Key.wasPressedThisFrame) OnOptionSelected(2);
+            else if (UnityEngine.InputSystem.Keyboard.current.digit4Key.wasPressedThisFrame || UnityEngine.InputSystem.Keyboard.current.numpad4Key.wasPressedThisFrame) OnOptionSelected(3);
+            else if (UnityEngine.InputSystem.Keyboard.current.digit5Key.wasPressedThisFrame || UnityEngine.InputSystem.Keyboard.current.numpad5Key.wasPressedThisFrame) OnOptionSelected(4);
+            
+            // Seçenek bekleniyorken fare veya başka atlamaya izin verme
+            return;
+        }
+
+        // Diyalog atlama kontrolü (Fare Sol Tık VEYA Yeni Sistem Tuşları)
+        bool advancePressed = false;
+
+        if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame) advancePressed = true;
+        if (UnityEngine.InputSystem.Keyboard.current != null && (UnityEngine.InputSystem.Keyboard.current.eKey.wasPressedThisFrame || UnityEngine.InputSystem.Keyboard.current.enterKey.wasPressedThisFrame || UnityEngine.InputSystem.Keyboard.current.spaceKey.wasPressedThisFrame)) advancePressed = true;
+        if (UnityEngine.InputSystem.Gamepad.current != null && (UnityEngine.InputSystem.Gamepad.current.buttonSouth.wasPressedThisFrame || UnityEngine.InputSystem.Gamepad.current.buttonNorth.wasPressedThisFrame)) advancePressed = true;
+
+        if (advancePressed)
+        {
+            if (showingPlayerText)
+            {
+                // Zaten oyuncunun kendi seçtiği metin ekrandaydı, şimdi tıklanınca NPC'nin cevabına (sonraki cümleye) geç
+                
+                // Oyuncu baloncuğunu gizle, NPC baloncuğunu tekrar aç
+                if (playerBubbleObj != null) playerBubbleObj.SetActive(false);
+                if (currentBubbleObj != null) currentBubbleObj.SetActive(true);
+
+                ShowNpcDialog(currentNpcDialogId);
+            }
+            else
+            {
+                // NPC'nin metni ekrandaydı ve seçenek yoktu. Sıradaki NPC cümlesine geç
+                if (int.TryParse(currentNpcDialogId, out int currentIdInt))
                 {
-                    Debug.Log($"Sonraki NPC cümlesi: [{nextId}] (Otomatik geçmek istersen ShowNpcDialog fonksiyonunu çağırabilirsin)");
+                    string nextId = (currentIdInt + 1).ToString();
+                    ShowNpcDialog(nextId);
+                }
+                else
+                {
+                    EndDialog();
                 }
             }
         }

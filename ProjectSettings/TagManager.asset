@@ -9,6 +9,7 @@ TagManager:
   - InvisibleEnemies
   - Destructiables
   - Enemy
+  - Alchemist
   layers:
   - Default
   - TransparentFX
