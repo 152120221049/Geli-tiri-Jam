@@ -148,10 +148,15 @@ public class InventoryUI : MonoBehaviour
         if (inventoryGridContainer == null) return;
         inventoryCellImages = new Image[w, h];
 
-        // Önceki overlay'i kaldır (varsa)
-        int prebuiltChildCount = inventoryGridContainer.childCount;
+        // Prebuilt slotları kontrol et: childCount >= slots OLMALI ve child'lar ItemUI olmamalı!
+        int validPrebuiltGridCount = 0;
+        for (int i = 0; i < inventoryGridContainer.childCount; i++)
+        {
+            if (inventoryGridContainer.GetChild(i).GetComponent<InventoryItemUI>() == null)
+                validPrebuiltGridCount++;
+        }
 
-        bool hasPrebuilt = prebuiltChildCount >= w * h;
+        bool hasPrebuilt = validPrebuiltGridCount >= w * h;
         bool hasGridLayout = inventoryGridContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>() != null;
 
         if (!hasPrebuilt && !hasGridLayout && cellPrefab != null)
@@ -218,15 +223,29 @@ public class InventoryUI : MonoBehaviour
         hotbarCellImages = new Image[slots];
         hotbarOutlines = new Outline[slots];
 
-        if (hotbarContainer == null) return;
-
-        bool hasPrebuilt = hotbarContainer.childCount >= slots;
-
-        if (!hasPrebuilt && cellPrefab != null)
+        if (hotbarContainer == null)
         {
-            float totalWidth = slots * hotbarCellSize + (slots - 1) * cellSpacing;
-            hotbarContainer.sizeDelta = new Vector2(totalWidth, hotbarCellSize);
+            Debug.LogError("InventoryUI: hotbarContainer atanmamış!");
+            return;
         }
+
+        // HorizontalLayoutGroup varsa aktif tut
+        HorizontalLayoutGroup hlg = hotbarContainer.GetComponent<HorizontalLayoutGroup>();
+        if (hlg != null)
+        {
+            hlg.enabled = true;
+        }
+
+        // Prebuilt slotları say (sadece ItemUI olmayan child'lar)
+        List<Transform> prebuiltSlots = new List<Transform>();
+        for (int i = 0; i < hotbarContainer.childCount; i++)
+        {
+            Transform child = hotbarContainer.GetChild(i);
+            if (child.GetComponent<InventoryItemUI>() == null)
+                prebuiltSlots.Add(child);
+        }
+
+        bool hasPrebuilt = prebuiltSlots.Count >= slots;
 
         for (int i = 0; i < slots; i++)
         {
@@ -234,21 +253,12 @@ public class InventoryUI : MonoBehaviour
 
             if (hasPrebuilt)
             {
-                // Var olan UI slotunu kullan
-                cell = hotbarContainer.GetChild(i).gameObject;
+                cell = prebuiltSlots[i].gameObject;
             }
             else if (cellPrefab != null)
             {
-                // Prefab'tan türet
                 cell = Instantiate(cellPrefab, hotbarContainer);
                 cell.name = $"HotbarSlot_{i}";
-
-                RectTransform rt = cell.GetComponent<RectTransform>();
-                rt.sizeDelta = new Vector2(hotbarCellSize, hotbarCellSize);
-                rt.anchorMin = new Vector2(0, 0.5f);
-                rt.anchorMax = new Vector2(0, 0.5f);
-                rt.pivot = new Vector2(0, 0.5f);
-                rt.anchoredPosition = new Vector2(i * (hotbarCellSize + cellSpacing), 0);
             }
             else
             {
@@ -260,7 +270,6 @@ public class InventoryUI : MonoBehaviour
             img.raycastTarget = true;
             hotbarCellImages[i] = img;
 
-            // Vurgu çerçevesi (Outline bileşeni)
             Outline outline = cell.GetComponent<Outline>();
             if (outline == null)
                 outline = cell.AddComponent<Outline>();
@@ -268,7 +277,6 @@ public class InventoryUI : MonoBehaviour
             outline.effectDistance = new Vector2(3, -3);
             hotbarOutlines[i] = outline;
 
-            // Drop hedefi ekle
             InventoryDropZone dropZone = cell.GetComponent<InventoryDropZone>();
             if (dropZone == null)
                 dropZone = cell.AddComponent<InventoryDropZone>();
@@ -333,56 +341,37 @@ public class InventoryUI : MonoBehaviour
     {
         if (itemUIPrefab == null || cellParent == null) return;
 
-        // Doğrudan hedef hücrenin child'ı yap (pozisyon her zaman kusursuz hücre sol üstü)
+        // Doğrudan hedef hücrenin child'ı yap
         GameObject uiObj = Instantiate(itemUIPrefab, cellParent);
         uiObj.name = $"ItemUI_{item.itemData.itemName}";
 
         RectTransform rt = uiObj.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0, 1);
-        rt.anchorMax = new Vector2(0, 1);
-        rt.pivot = new Vector2(0, 1);
-        rt.anchoredPosition = Vector2.zero;
 
-        // ── Canvas Sorting Override: Eşyanın diğer komşu hücrelerin ÜSTÜNDE çizilmesini sağla ──
+        // ── LayoutGroup'lardan muaf tut ──
+        LayoutElement le = uiObj.GetComponent<LayoutElement>();
+        if (le == null)
+            le = uiObj.AddComponent<LayoutElement>();
+        le.ignoreLayout = true;
+
+        // ── Canvas Sorting Override ──
         Canvas itemCanvas = uiObj.GetComponent<Canvas>();
         if (itemCanvas == null)
             itemCanvas = uiObj.AddComponent<Canvas>();
 
         itemCanvas.overrideSorting = true;
-        itemCanvas.sortingOrder = 10; // Grid hücrelerinin (order 0) üstünde çizilir
+        itemCanvas.sortingOrder = 10;
 
         GraphicRaycaster raycaster = uiObj.GetComponent<GraphicRaycaster>();
         if (raycaster == null)
             uiObj.AddComponent<GraphicRaycaster>();
 
-        // ── Full Raycast Target Image: Eşyanın kapladığı 2x2, 1x2 vb. TÜM alanı tıklanabilir/sürüklenebilir yapar ──
         Image rootImg = uiObj.GetComponent<Image>();
         if (rootImg == null)
             rootImg = uiObj.AddComponent<Image>();
         rootImg.color = Color.clear;
         rootImg.raycastTarget = true;
 
-        // ── Gerçek hücre boyutunu referans hücreden oku ──
-        float actualCellW = isHotbar ? (cellParent.rect.width > 0 ? cellParent.rect.width : hotbarCellSize) : cellParent.rect.width;
-        float actualCellH = isHotbar ? (cellParent.rect.height > 0 ? cellParent.rect.height : hotbarCellSize) : cellParent.rect.height;
-
-        // Eğer rect henüz hesaplanmamışsa fallback boyutları kullan
-        if (actualCellW <= 0) actualCellW = isHotbar ? hotbarCellSize : cellSize;
-        if (actualCellH <= 0 || isHotbar) actualCellH = actualCellW; // Hotbar slot yüksekliğini genişliğe kitle
-
-        // GridLayoutGroup'tan gerçek spacing'i oku
-        float actualSpacing = cellSpacing;
-        Transform containerParent = cellParent.parent;
-        if (containerParent != null)
-        {
-            GridLayoutGroup glg = containerParent.GetComponent<GridLayoutGroup>();
-            if (glg != null)
-            {
-                actualSpacing = isHotbar ? glg.spacing.x : Mathf.Max(glg.spacing.x, glg.spacing.y);
-            }
-        }
-
-        // Eşya boyutuna göre UI boyutu
+        // Eşya boyutları
         int w = item.EffectiveWidth;
         int h = item.EffectiveHeight;
 
@@ -392,9 +381,42 @@ public class InventoryUI : MonoBehaviour
             h = 1;
         }
 
-        rt.sizeDelta = new Vector2(
-            w * actualCellW + (w - 1) * actualSpacing,
-            h * actualCellH + (h - 1) * actualSpacing);
+        if (w == 1 && h == 1)
+        {
+            // 1x1 eşyalar slot'un içerisini %100 dolduracak şekilde esnetilir
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+        }
+        else
+        {
+            // Çoklu slot kaplayan eşyalar (ör. Hotbar 2x1 eşyaları)
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = Vector2.zero;
+
+            float slotW = Mathf.Abs(cellParent.rect.width);
+            float slotH = Mathf.Abs(cellParent.rect.height);
+            if (slotW <= 0) slotW = isHotbar ? hotbarCellSize : cellSize;
+            if (slotH <= 0) slotH = slotW;
+
+            float spacing = cellSpacing;
+            if (isHotbar && hotbarContainer != null)
+            {
+                HorizontalLayoutGroup hlg = hotbarContainer.GetComponent<HorizontalLayoutGroup>();
+                if (hlg != null) spacing = hlg.spacing;
+            }
+            else if (!isHotbar && inventoryGridContainer != null)
+            {
+                GridLayoutGroup glg = inventoryGridContainer.GetComponent<GridLayoutGroup>();
+                if (glg != null) spacing = glg.spacing.x;
+            }
+
+            rt.sizeDelta = new Vector2(w * slotW + (w - 1) * spacing, h * slotH + (h - 1) * spacing);
+        }
 
         InventoryItemUI itemUI = uiObj.GetComponent<InventoryItemUI>();
         if (itemUI != null)

@@ -108,16 +108,61 @@ public class InventoryItemUI : MonoBehaviour,
         UpdateVisuals();
     }
 
+    private void EnsureIconImageBuilt()
+    {
+        Image rootImg = GetComponent<Image>();
+
+        if (iconImage == null || iconImage == rootImg)
+        {
+            // Önce root dışındaki child Image'ları ara
+            Image[] childImages = GetComponentsInChildren<Image>(true);
+            foreach (var img in childImages)
+            {
+                if (img != rootImg)
+                {
+                    iconImage = img;
+                    break;
+                }
+            }
+
+            // Çocuklarda da bulunamadıysa "ItemIcon" adında yeni child Image oluştur
+            if (iconImage == null || iconImage == rootImg)
+            {
+                Transform existingChild = transform.Find("ItemIcon");
+                GameObject iconObj;
+                if (existingChild != null)
+                {
+                    iconObj = existingChild.gameObject;
+                }
+                else
+                {
+                    iconObj = new GameObject("ItemIcon", typeof(RectTransform), typeof(Image));
+                    iconObj.transform.SetParent(transform, false);
+                }
+
+                iconImage = iconObj.GetComponent<Image>();
+            }
+        }
+
+        if (iconImage != null)
+        {
+            iconImage.color = Color.white;
+        }
+    }
+
     /// <summary>İkon, adet ve dayanıklılık görsellerini günceller.</summary>
     public void UpdateVisuals()
     {
         if (Item == null || Item.itemData == null) return;
+
+        EnsureIconImageBuilt();
 
         // ── İkon ──
         if (iconImage != null)
         {
             iconImage.sprite = Item.itemData.icon;
             iconImage.enabled = Item.itemData.icon != null;
+            iconImage.color = Color.white; // Görsel şeffaflığı önle
             iconImage.raycastTarget = false; // Tıklama tespiti kök (root) Görsel bileşeni tarafından yapılır
 
             RectTransform iconRT = iconImage.rectTransform;
@@ -226,9 +271,17 @@ public class InventoryItemUI : MonoBehaviour,
         canvasGroup.alpha = 1f;
         canvasGroup.blocksRaycasts = true;
 
-        // InventoryDropZone OnDrop'ta eşya taşınmadıysa, geri dön
-        // InventoryUI RefreshAllItems çağrıldığında pozisyon otomatik düzelir.
-        // Yine de güvenlik için: eğer eşya hâlâ aynı grid pozisyonundaysa geri dön
+        // Grid veya Hotbar dışındaki boş bir alana bırakıldıysa dünyada yere at
+        bool droppedOnInventoryUI = eventData.pointerEnter != null && 
+            (eventData.pointerEnter.GetComponentInParent<InventoryDropZone>() != null || 
+             eventData.pointerEnter.GetComponentInParent<InventoryItemUI>() != null);
+
+        if (!droppedOnInventoryUI && InventoryManager.Instance != null && Item != null)
+        {
+            InventoryManager.Instance.DropItemToWorld(Item);
+            return;
+        }
+
         if (originalParent != null)
         {
             transform.SetParent(originalParent);
@@ -236,7 +289,6 @@ public class InventoryItemUI : MonoBehaviour,
             rectTransform.anchoredPosition = originalAnchoredPos;
         }
 
-        // UI yenilemesi tetikle
         if (InventoryManager.Instance != null)
             InventoryManager.Instance.NotifyInventoryChanged();
     }
@@ -327,9 +379,9 @@ public class InventoryItemUI : MonoBehaviour,
         }
         else
         {
-            // ── Tek tıklama → Tooltip göster ──
+            // ── Tek tıklama → Tooltip'i sabitle (Kullan butonuna tıklanabilsin) ──
             lastClickTime = Time.unscaledTime;
-            ShowTooltip();
+            ShowTooltip(pin: true);
         }
     }
 
@@ -359,16 +411,22 @@ public class InventoryItemUI : MonoBehaviour,
         hoverTimer = 0f;
         tooltipShown = false;
 
-        if (ItemTooltipUI.Instance != null)
+        // Sabitlenmemişse gizle (Sabitlenmişse 'Kullan' butonuna basmak için açık kalır)
+        if (ItemTooltipUI.Instance != null && !ItemTooltipUI.Instance.IsPinned)
             ItemTooltipUI.Instance.Hide();
     }
 
-    private void ShowTooltip()
+    private void ShowTooltip(bool pin = false)
     {
         if (Item == null) return;
+
+        // Envanter açık değilse tooltip gösterme (hotbar'da oyun sırasında tooltip istemiyoruz)
+        if (InventoryManager.Instance != null && !InventoryManager.Instance.IsInventoryOpen)
+            return;
+
         tooltipShown = true;
 
         if (ItemTooltipUI.Instance != null)
-            ItemTooltipUI.Instance.Show(Item, InventoryInput.GetMousePosition());
+            ItemTooltipUI.Instance.Show(Item, InventoryInput.GetMousePosition(), pin);
     }
 }
