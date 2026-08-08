@@ -16,10 +16,10 @@ public class InventoryManager : MonoBehaviour
     [SerializeField] private int inventoryHeight = 4;
 
     [Header("Hotbar Ayarları")]
-    [SerializeField] private int hotbarSlots = 4;
+    [SerializeField] private int hotbarSlots = 5;
 
     [Header("Hold-to-Open Ayarları")]
-    [SerializeField] private float holdDuration = 1.5f;
+    [SerializeField] private float holdDuration = 0.7f;
     [SerializeField] private KeyCode inventoryKey1 = KeyCode.I;
     [SerializeField] private KeyCode inventoryKey2 = KeyCode.E;
 
@@ -73,6 +73,8 @@ public class InventoryManager : MonoBehaviour
             return;
         }
         Instance = this;
+
+        if (hotbarSlots < 5) hotbarSlots = 5;
 
         InventoryGrid = new InventoryGridData(inventoryWidth, inventoryHeight);
         HotbarGrid = new InventoryGridData(hotbarSlots, 1);
@@ -238,6 +240,49 @@ public class InventoryManager : MonoBehaviour
             return;
         }
 
+        // Kalkanlar ve Zırhlar envanterde bulunduğu an pasif etkilerini verirler — Hotbar'a kuşanılmazlar
+        if (item.itemData != null && (item.itemData.itemType == ItemType.Shield || item.itemData.itemType == ItemType.Armor))
+        {
+            Debug.Log($"🛡️ '{item.itemData.itemName}' pasif etki verir, Hotbar'a konulmasına gerek yoktur.");
+            return;
+        }
+
+        // ── OK (ARROW) → KULLAN DENİNCE SADAĞA YÜKLE ──
+        if (item.itemData != null && item.itemData.itemType == ItemType.Arrow)
+        {
+            InventoryItem quiverItem = FindFirstQuiver();
+            if (quiverItem != null && PlayerEquipmentController.Instance != null)
+            {
+                QuiverData qData = PlayerEquipmentController.Instance.GetQuiverData(quiverItem);
+                bool loaded = qData.TryLoadArrow(item.itemData, quiverItem.itemData.maxArrowCapacity);
+                if (loaded)
+                {
+                    RemoveItemCompletely(item);
+                    if (ItemTooltipUI.Instance != null)
+                        ItemTooltipUI.Instance.Hide();
+                    return;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("🏹 [SADAK HATA] Ok doldurabilmek için envanterinizde yer olan bir Sadak (Quiver) olmalıdır!");
+                return;
+            }
+        }
+
+        // ── EĞER EŞYA ANA ENVANTERDEYSE VE HOTBAR'DA DEĞİLSE → HOTBAR'A KUŞAN (EQUIP) ──
+        if (InventoryGrid.Contains(item) && !HotbarGrid.Contains(item))
+        {
+            bool equipped = QuickMoveToHotbar(item);
+            if (equipped)
+            {
+                Debug.Log($"⚔️ [EQUIP] '{item.itemData.itemName}' Hotbar'a kuşandı!");
+                if (ItemTooltipUI.Instance != null)
+                    ItemTooltipUI.Instance.Hide();
+                return;
+            }
+        }
+
         if (!item.CanUse()) return;
 
         bool depleted = item.Use();
@@ -346,16 +391,26 @@ public class InventoryManager : MonoBehaviour
     /// <summary>
     /// Eşyayı bir grid'den diğerine (veya aynı grid içinde) taşır.
     /// </summary>
+    /// <summary>
+    /// Eşyayı bir grid'den diğerine (veya aynı grid içinde) taşır veya hedef yerdeki eşya ile TAKAS (Swap) yapar.
+    /// Hiçbir eşya kaybolmaz; yerinden edilen eşya orijinal yerine veya boş alana otomatik taşınır.
+    /// </summary>
     public bool MoveItem(InventoryItem item, InventoryGridData targetGrid, int targetX, int targetY)
     {
+        if (item == null || targetGrid == null) return false;
+
         InventoryGridData sourceGrid = GetGridContaining(item);
         if (sourceGrid == null) return false;
 
-        // Orijinal pozisyonu kaydet (geri alma için)
-        int origX = item.gridX;
-        int origY = item.gridY;
+        // Aynı pozisyon ise işlem yapma
+        if (sourceGrid == targetGrid && item.gridX == targetX && item.gridY == targetY)
+            return true;
 
-        // Geçici olarak kaldır
+        // Kaynak eşyanın orijinal konumunu kaydet
+        int itemOrigX = item.gridX;
+        int itemOrigY = item.gridY;
+
+        // 1) Doğrudan Boş Hücreye Taşıma Denemesi
         sourceGrid.RemoveItem(item);
 
         if (targetGrid.CanPlaceItem(item, targetX, targetY))
@@ -364,12 +419,49 @@ public class InventoryManager : MonoBehaviour
             OnInventoryChanged?.Invoke();
             return true;
         }
-        else
+
+        // 2) Hedefteki eşya(lar) ile TAKAS (Swap) veya Deplasman Denemesi
+        InventoryItem targetItem = targetGrid.GetItemAt(targetX, targetY);
+
+        if (targetItem != null && targetItem != item)
         {
-            // Yerleştirilemedi — orijinal pozisyona geri koy
-            sourceGrid.PlaceItem(item, origX, origY);
-            return false;
+            // Hedef eşyanın orijinal konumunu kaydet
+            int targetOrigX = targetItem.gridX;
+            int targetOrigY = targetItem.gridY;
+            InventoryGridData targetItemSourceGrid = GetGridContaining(targetItem);
+
+            if (targetItemSourceGrid != null)
+            {
+                targetItemSourceGrid.RemoveItem(targetItem);
+
+                // Şimdi item hedef konuma sığıyor mu?
+                if (targetGrid.CanPlaceItem(item, targetX, targetY))
+                {
+                    // targetItem kaynak konuma sığıyor mu?
+                    if (sourceGrid.CanPlaceItem(targetItem, itemOrigX, itemOrigY))
+                    {
+                        targetGrid.PlaceItem(item, targetX, targetY);
+                        sourceGrid.PlaceItem(targetItem, itemOrigX, itemOrigY);
+                        OnInventoryChanged?.Invoke();
+                        return true;
+                    }
+                    // Birebir konuma sığmıyorsa envanterde boş bir alana otomatik yerleşebilir mi?
+                    else if (sourceGrid.AutoPlaceItem(targetItem) || InventoryGrid.AutoPlaceItem(targetItem))
+                    {
+                        targetGrid.PlaceItem(item, targetX, targetY);
+                        OnInventoryChanged?.Invoke();
+                        return true;
+                    }
+                }
+
+                // Takas sığmadı — targetItem'ı orijinal yerine geri koy
+                targetItemSourceGrid.PlaceItem(targetItem, targetOrigX, targetOrigY);
+            }
         }
+
+        // 3) Tüm işlemler başarısız — item'ı orijinal pozisyonuna geri yerleştir
+        sourceGrid.PlaceItem(item, itemOrigX, itemOrigY);
+        return false;
     }
 
     /// <summary>Eşyanın hangi grid'de olduğunu döndürür.</summary>
@@ -385,33 +477,28 @@ public class InventoryManager : MonoBehaviour
     {
         if (item == null) return false;
 
-        // 2x2 veya çoklu slot kısıtlaması kontrolü
-        if (!HotbarGrid.CanPlaceItem(item, 0, 0) &&
-            !HotbarGrid.CanPlaceItem(item, 1, 0) &&
-            !HotbarGrid.CanPlaceItem(item, 2, 0))
-        {
-            Debug.LogWarning($"{item.itemData.itemName} Hotbar'a konulamaz (boyutu uygun değil)!");
-            return false;
-        }
-
-        // Tercih edilen slot istendiyse dene
+        // 1) Tercih edilen slot verilmişse ve TAMAMEN BOŞSA yerleştir
         if (preferredSlot >= 0 && preferredSlot < hotbarSlots)
         {
-            if (MoveItem(item, HotbarGrid, preferredSlot, 0))
+            if (HotbarGrid.CanPlaceItem(item, preferredSlot, 0))
+            {
+                MoveItem(item, HotbarGrid, preferredSlot, 0);
                 return true;
+            }
         }
 
-        // Aktif slotu dene
-        if (MoveItem(item, HotbarGrid, ActiveHotbarSlot, 0))
-            return true;
-
-        // Herhangi bir boş slotu dene
+        // 2) Hotbar'daki tüm boş slotları sırayla tara (yalnızca tamamen boş yerleşebilen yerler)
         for (int i = 0; i < hotbarSlots; i++)
         {
-            if (MoveItem(item, HotbarGrid, i, 0))
+            if (HotbarGrid.CanPlaceItem(item, i, 0))
+            {
+                MoveItem(item, HotbarGrid, i, 0);
                 return true;
+            }
         }
 
+        // 3) 'Kullan' ile otomatik kuşanmada takas yapılmaz; boş yer yoksa reddet
+        Debug.LogWarning($"⚠️ [HOTBAR DOLU] Hotbar'da '{item.itemData.itemName}' için sığacak boş yer yok!");
         return false;
     }
 
@@ -510,5 +597,17 @@ public class InventoryManager : MonoBehaviour
             HotbarGrid.AutoPlaceItem(item);
             return false;
         }
+    }
+
+    /// <summary>Envanterde veya Hotbar'daki ilk Sadak (Quiver) nesnesini bulur.</summary>
+    public InventoryItem FindFirstQuiver()
+    {
+        foreach (var i in HotbarGrid.GetAllItems())
+            if (i.itemData != null && i.itemData.itemType == ItemType.Quiver) return i;
+
+        foreach (var i in InventoryGrid.GetAllItems())
+            if (i.itemData != null && i.itemData.itemType == ItemType.Quiver) return i;
+
+        return null;
     }
 }

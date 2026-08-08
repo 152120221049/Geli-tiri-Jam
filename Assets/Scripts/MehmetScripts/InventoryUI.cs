@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System.Collections.Generic;
 
 /// <summary>
@@ -38,11 +39,17 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Color activeSlotColor = new Color(1f, 0.84f, 0f, 0.8f);     // Altın sarısı
     [SerializeField] private Color normalSlotColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);  // Koyu gri
 
+    [Header("Sürükleme Önizleme Renkleri")]
+    [SerializeField] private Color validDragColor = new Color(0.2f, 0.9f, 0.3f, 0.9f);   // Yeşil (Boş & Yerleşebilir)
+    [SerializeField] private Color swapDragColor = new Color(0.3f, 0.7f, 1f, 0.9f);    // Mavi (Takas Edilebilir)
+    [SerializeField] private Color invalidDragColor = new Color(0.9f, 0.2f, 0.2f, 0.9f); // Kırmızı (Dolu / Sığmıyor)
+
     // ── Dahili Referanslar ──
     private InventoryManager manager;
 
-    // Grid hücre Image'ları
+    // Grid hücre Image'ları ve Çerçeveleri
     private Image[,] inventoryCellImages;
+    private Outline[,] inventoryOutlines;
     private Image[] hotbarCellImages;
 
     // Aktif eşya UI elemanları
@@ -147,6 +154,7 @@ public class InventoryUI : MonoBehaviour
         int h = manager.InventoryGrid.height;
         if (inventoryGridContainer == null) return;
         inventoryCellImages = new Image[w, h];
+        inventoryOutlines = new Outline[w, h];
 
         // Prebuilt slotları kontrol et: childCount >= slots OLMALI ve child'lar ItemUI olmamalı!
         int validPrebuiltGridCount = 0;
@@ -207,6 +215,12 @@ public class InventoryUI : MonoBehaviour
                 img.raycastTarget = true;
                 inventoryCellImages[x, y] = img;
 
+                Outline outline = cell.GetComponent<Outline>();
+                if (outline == null) outline = cell.AddComponent<Outline>();
+                outline.effectColor = normalSlotColor;
+                outline.effectDistance = new Vector2(3, -3);
+                inventoryOutlines[x, y] = outline;
+
                 // Drop hedefi ekle
                 InventoryDropZone dropZone = cell.GetComponent<InventoryDropZone>();
                 if (dropZone == null)
@@ -236,7 +250,7 @@ public class InventoryUI : MonoBehaviour
             hlg.enabled = true;
         }
 
-        // Prebuilt slotları say (sadece ItemUI olmayan child'lar)
+        // Prebuilt slotları al (sadece ItemUI olmayan child'lar)
         List<Transform> prebuiltSlots = new List<Transform>();
         for (int i = 0; i < hotbarContainer.childCount; i++)
         {
@@ -245,13 +259,11 @@ public class InventoryUI : MonoBehaviour
                 prebuiltSlots.Add(child);
         }
 
-        bool hasPrebuilt = prebuiltSlots.Count >= slots;
-
         for (int i = 0; i < slots; i++)
         {
             GameObject cell;
 
-            if (hasPrebuilt)
+            if (i < prebuiltSlots.Count)
             {
                 cell = prebuiltSlots[i].gameObject;
             }
@@ -260,9 +272,21 @@ public class InventoryUI : MonoBehaviour
                 cell = Instantiate(cellPrefab, hotbarContainer);
                 cell.name = $"HotbarSlot_{i}";
             }
+            else if (prebuiltSlots.Count > 0)
+            {
+                // cellPrefab yoksa 0. slot'un kopyasını üret
+                cell = Instantiate(prebuiltSlots[0].gameObject, hotbarContainer);
+                cell.name = $"HotbarSlot_{i}";
+                foreach (Transform c in cell.transform)
+                {
+                    if (c.GetComponent<InventoryItemUI>() != null)
+                        Destroy(c.gameObject);
+                }
+            }
             else
             {
-                continue;
+                cell = new GameObject($"HotbarSlot_{i}", typeof(RectTransform), typeof(Image));
+                cell.transform.SetParent(hotbarContainer, false);
             }
 
             Image img = cell.GetComponent<Image>();
@@ -601,8 +625,107 @@ public class InventoryUI : MonoBehaviour
                     }
                 }
             }
+
+            if (item != null)
+            {
+                int itemW = item.itemData.gridWidth;
+                if (item.isRotated) itemW = item.itemData.gridHeight;
+                bestCell.x = Mathf.Clamp(bestCell.x, 0, Mathf.Max(0, grid.width - itemW));
+            }
         }
 
         return bestCell;
+    }
+
+    // ═══════════════════════════════════════════
+    //  SÜRÜKLEME ÖNİZLEME (DRAG HIGHLIGHT)
+    // ═══════════════════════════════════════════
+
+    public InventoryGridData GetGridUnderPointer(PointerEventData eventData)
+    {
+        if (eventData == null) return null;
+
+        if (eventData.pointerEnter != null)
+        {
+            InventoryDropZone dropZone = eventData.pointerEnter.GetComponentInParent<InventoryDropZone>();
+            if (dropZone != null && dropZone.TargetGrid != null)
+                return dropZone.TargetGrid;
+
+            InventoryItemUI itemUI = eventData.pointerEnter.GetComponentInParent<InventoryItemUI>();
+            if (itemUI != null && itemUI.Item != null && manager != null)
+                return manager.GetGridContaining(itemUI.Item);
+        }
+
+        // Fare Hotbar alanının üzerindeyse
+        if (hotbarContainer != null && manager != null)
+        {
+            Camera cam = eventData.pressEventCamera ?? Camera.main;
+            if (RectTransformUtility.RectangleContainsScreenPoint(hotbarContainer, eventData.position, cam))
+                return manager.HotbarGrid;
+        }
+
+        // Fare Envanter alanının üzerindeyse
+        if (inventoryGridContainer != null && manager != null)
+        {
+            Camera cam = eventData.pressEventCamera ?? Camera.main;
+            if (RectTransformUtility.RectangleContainsScreenPoint(inventoryGridContainer, eventData.position, cam))
+                return manager.InventoryGrid;
+        }
+
+        return null;
+    }
+
+    public void UpdateDragHighlight(InventoryItem item, InventoryGridData targetGrid, Vector2Int targetCell)
+    {
+        ClearDragHighlight();
+
+        if (item == null || targetGrid == null || manager == null) return;
+
+        bool canPlaceDirectly = targetGrid.CanPlaceItem(item, targetCell.x, targetCell.y);
+        InventoryItem existingItem = targetGrid.GetItemAt(targetCell.x, targetCell.y);
+
+        Color targetColor = invalidDragColor;
+        if (canPlaceDirectly)
+            targetColor = validDragColor;
+        else if (existingItem != null && existingItem != item)
+            targetColor = swapDragColor;
+
+        int w = item.itemData.gridWidth;
+        int h = item.itemData.gridHeight;
+        if (item.isRotated) { int tmp = w; w = h; h = tmp; }
+        if (targetGrid == manager.HotbarGrid && h > 1 && w == 1) { w = h; h = 1; }
+
+        if (targetGrid == manager.InventoryGrid && inventoryOutlines != null)
+        {
+            for (int x = targetCell.x; x < Mathf.Min(targetCell.x + w, manager.InventoryGrid.width); x++)
+            {
+                for (int y = targetCell.y; y < Mathf.Min(targetCell.y + h, manager.InventoryGrid.height); y++)
+                {
+                    if (x >= 0 && y >= 0 && x < inventoryOutlines.GetLength(0) && y < inventoryOutlines.GetLength(1) && inventoryOutlines[x, y] != null)
+                        inventoryOutlines[x, y].effectColor = targetColor;
+                }
+            }
+        }
+        else if (targetGrid == manager.HotbarGrid && hotbarOutlines != null)
+        {
+            for (int i = targetCell.x; i < Mathf.Min(targetCell.x + w, manager.HotbarGrid.width); i++)
+            {
+                if (i >= 0 && i < hotbarOutlines.Length && hotbarOutlines[i] != null)
+                    hotbarOutlines[i].effectColor = targetColor;
+            }
+        }
+    }
+
+    public void ClearDragHighlight()
+    {
+        if (inventoryOutlines != null)
+        {
+            for (int x = 0; x < inventoryOutlines.GetLength(0); x++)
+                for (int y = 0; y < inventoryOutlines.GetLength(1); y++)
+                    if (inventoryOutlines[x, y] != null)
+                        inventoryOutlines[x, y].effectColor = normalSlotColor;
+        }
+
+        UpdateHotbarHighlight();
     }
 }

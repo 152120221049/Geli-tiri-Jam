@@ -148,6 +148,29 @@ public class InventoryItemUI : MonoBehaviour,
         {
             iconImage.color = Color.white;
         }
+
+        // ── Adet metni (stackText) eksikse otomatik ekle ──
+        if (stackText == null)
+        {
+            stackText = GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
+            if (stackText == null)
+            {
+                GameObject textObj = new GameObject("StackText", typeof(RectTransform), typeof(TMPro.TextMeshProUGUI));
+                textObj.transform.SetParent(transform, false);
+
+                RectTransform textRT = textObj.GetComponent<RectTransform>();
+                textRT.anchorMin = Vector2.zero;
+                textRT.anchorMax = Vector2.one;
+                textRT.offsetMin = new Vector2(0, 2);
+                textRT.offsetMax = new Vector2(-4, 0);
+
+                stackText = textObj.GetComponent<TMPro.TextMeshProUGUI>();
+                stackText.fontSize = 14f;
+                stackText.fontStyle = TMPro.FontStyles.Bold;
+                stackText.alignment = TMPro.TextAlignmentOptions.BottomRight;
+                stackText.raycastTarget = false;
+            }
+        }
     }
 
     /// <summary>İkon, adet ve dayanıklılık görsellerini günceller.</summary>
@@ -191,13 +214,33 @@ public class InventoryItemUI : MonoBehaviour,
             }
         }
 
-        // ── Adet Metni ──
+        // ── Adet & Sadak (Quiver) Ok Sayısı Metni ──
         if (stackText != null)
         {
-            if (Item.currentStack > 1)
+            if (Item.itemData.itemType == ItemType.Quiver && PlayerEquipmentController.Instance != null)
+            {
+                QuiverData qData = PlayerEquipmentController.Instance.GetQuiverData(Item);
+                stackText.gameObject.SetActive(true);
+                stackText.text = qData.storedArrowCount.ToString();
+
+                if (qData.storedArrowCount <= 0)
+                {
+                    stackText.color = new Color(0.6f, 0.6f, 0.6f, 0.9f); // Gri (Boş Sadak)
+                }
+                else if (qData.storedArrowType != null && (qData.storedArrowType.itemName.Contains("Ateşli") || qData.storedArrowType.leavesFireArea))
+                {
+                    stackText.color = new Color(1f, 0.45f, 0.1f, 1f); // Ateş Turuncusu (Ateşli Ok)
+                }
+                else
+                {
+                    stackText.color = new Color(0.95f, 0.95f, 0.75f, 1f); // Sarımsı Beyaz (Normal Ok)
+                }
+            }
+            else if (Item.currentStack > 1)
             {
                 stackText.gameObject.SetActive(true);
                 stackText.text = Item.currentStack.ToString();
+                stackText.color = Color.white;
             }
             else
             {
@@ -263,6 +306,20 @@ public class InventoryItemUI : MonoBehaviour,
     {
         if (!isDragging) return;
         rectTransform.anchoredPosition += eventData.delta / rootCanvas.scaleFactor;
+
+        if (InventoryUI.Instance != null)
+        {
+            InventoryGridData targetGrid = InventoryUI.Instance.GetGridUnderPointer(eventData);
+            if (targetGrid != null)
+            {
+                Vector2Int cell = InventoryUI.Instance.GetNearestCell(rectTransform, targetGrid, Item, Vector2Int.zero);
+                InventoryUI.Instance.UpdateDragHighlight(Item, targetGrid, cell);
+            }
+            else
+            {
+                InventoryUI.Instance.ClearDragHighlight();
+            }
+        }
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -271,10 +328,21 @@ public class InventoryItemUI : MonoBehaviour,
         canvasGroup.alpha = 1f;
         canvasGroup.blocksRaycasts = true;
 
-        // Grid veya Hotbar dışındaki boş bir alana bırakıldıysa dünyada yere at
-        bool droppedOnInventoryUI = eventData.pointerEnter != null && 
+        InventoryGridData targetGrid = (InventoryUI.Instance != null) ? InventoryUI.Instance.GetGridUnderPointer(eventData) : null;
+
+        if (InventoryUI.Instance != null)
+            InventoryUI.Instance.ClearDragHighlight();
+
+        bool droppedOnInventoryUI = (targetGrid != null) || (eventData.pointerEnter != null && 
             (eventData.pointerEnter.GetComponentInParent<InventoryDropZone>() != null || 
-             eventData.pointerEnter.GetComponentInParent<InventoryItemUI>() != null);
+             eventData.pointerEnter.GetComponentInParent<InventoryItemUI>() != null));
+
+        if (targetGrid != null && Item != null && InventoryManager.Instance != null)
+        {
+            Vector2Int cell = InventoryUI.Instance.GetNearestCell(rectTransform, targetGrid, Item, Vector2Int.zero);
+            InventoryManager.Instance.MoveItem(Item, targetGrid, cell.x, cell.y);
+            return;
+        }
 
         if (!droppedOnInventoryUI && InventoryManager.Instance != null && Item != null)
         {

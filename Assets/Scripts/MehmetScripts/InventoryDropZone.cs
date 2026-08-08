@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 public class InventoryDropZone : MonoBehaviour, IDropHandler, IPointerClickHandler
 {
     private InventoryGridData targetGrid;
+    public InventoryGridData TargetGrid => targetGrid;
     private int cellX;
     private int cellY;
 
@@ -32,6 +33,31 @@ public class InventoryDropZone : MonoBehaviour, IDropHandler, IPointerClickHandl
         if (draggedItemUI == null || draggedItemUI.Item == null) return;
 
         InventoryItem item = draggedItemUI.Item;
+
+        // 1.5) Ok → Sadak (Arrow → Quiver) doldurma kontrolü
+        InventoryItem existingItemAtCell = targetGrid.GetItemAt(cellX, cellY);
+        if (item.itemData.itemType == ItemType.Arrow && existingItemAtCell != null && existingItemAtCell.itemData.itemType == ItemType.Quiver)
+        {
+            if (PlayerEquipmentController.Instance != null)
+            {
+                QuiverData qData = PlayerEquipmentController.Instance.GetQuiverData(existingItemAtCell);
+                bool loaded = qData.TryLoadArrow(item.itemData, existingItemAtCell.itemData.maxArrowCapacity);
+                if (loaded)
+                {
+                    InventoryManager.Instance.RemoveItemCompletely(item);
+                    return;
+                }
+            }
+        }
+
+        // 1.6) Zırh Slot Kısıtı Kontrolü
+        if (item.itemData.itemType == ItemType.Armor && PlayerArmorSystem.Instance != null)
+        {
+            if (!PlayerArmorSystem.Instance.CanAddArmorItem(item.itemData))
+            {
+                return;
+            }
+        }
 
         // 1) Sürüklenen görselin sol üst köşesine en yakın hücreyi hesapla
         Vector2Int targetCell = new Vector2Int(cellX, cellY);

@@ -53,25 +53,28 @@ public class InventoryGridData
     /// </summary>
     public bool CanPlaceItem(InventoryItem item, int posX, int posY)
     {
-        int w = item.EffectiveWidth;
-        int h = item.EffectiveHeight;
+        if (item == null || item.itemData == null) return false;
+
+        int w = item.itemData.gridWidth;
+        int h = item.itemData.gridHeight;
+
+        if (item.isRotated)
+        {
+            int tmp = w; w = h; h = tmp;
+        }
 
         // Hotbar (height == 1) kuralları:
         if (height == 1)
         {
-            // 2x2 veya dikey ve yatayda 1'den büyük eşyalar Hotbar'a GİREMEZ
+            // 2x2, 2x3 gibi eni ve boyu 1'den büyük olan Zırh/Kalkan eşyaları Hotbar'a giremez
             if (item.itemData.gridWidth > 1 && item.itemData.gridHeight > 1)
                 return false;
 
-            // 1x2 dikey eşya Hotbar'a konulursa yatay 2x1 sığdırma hesabı yap
+            // Dikey 1xN eşyalar Hotbar'da yatay Nx1 olarak yerleşir
             if (h > 1 && w == 1)
             {
-                w = h; // 2 slot genişlik
+                w = h; // Nx1
                 h = 1;
-            }
-            else if (h > 1)
-            {
-                return false;
             }
         }
 
@@ -105,14 +108,18 @@ public class InventoryGridData
         if (items.Contains(item))
             RemoveItem(item);
 
-        int w = item.EffectiveWidth;
-        int h = item.EffectiveHeight;
+        int w = item.itemData.gridWidth;
+        int h = item.itemData.gridHeight;
+
+        if (item.isRotated)
+        {
+            int tmp = w; w = h; h = tmp;
+        }
 
         if (height == 1 && h > 1 && w == 1)
         {
             w = h;
             h = 1;
-            item.isRotated = true; // 1x2 -> 2x1 olarak döndür
         }
 
         for (int x = posX; x < posX + w; x++)

@@ -56,11 +56,13 @@ public class InventoryItem
 
     /// <summary>
     /// Eşyanın kullanılıp kullanılamayacağını kontrol eder.
-    /// Passive eşyalar kullanılamaz. Kırık veya stoku bitmiş eşyalar kullanılamaz.
+    /// Passive, Arrow ve Quiver eşyaları doğrudan kullanılamaz.
+    /// Kırık veya stoku bitmiş eşyalar kullanılamaz.
     /// </summary>
     public bool CanUse()
     {
         if (itemData.itemType == ItemType.Passive) return false;
+        if (itemData.itemType == ItemType.Quiver) return false;
         if (IsBroken) return false;
         if (IsEmpty) return false;
         return true;
@@ -75,6 +77,8 @@ public class InventoryItem
         switch (itemData.itemType)
         {
             case ItemType.Consumable:
+            case ItemType.ThrowableFlask:
+            case ItemType.SpellScroll:
                 currentStack--;
                 return IsEmpty;
 
@@ -87,13 +91,27 @@ public class InventoryItem
                 return false;
 
             case ItemType.KeyItem:
-                // Sonsuz dayanıklılık — asla tükenmez
+            case ItemType.Shield:
+            case ItemType.Armor:
+                // Sonsuz dayanıklılık — asla tükenmez (Shield/Armor hasarla kırılır)
+                return false;
+
+            case ItemType.ReadableNote:
+                // Not okunur — tüketilmez
+                return false;
+
+            case ItemType.QuestItem:
+                // Görev eşyaları fırlatılabilir olanlar için adet azalır
+                if (itemData.isThrowable)
+                {
+                    currentStack--;
+                    return IsEmpty;
+                }
                 return false;
 
             case ItemType.Passive:
-                // Kullanılamaz
-                return false;
-
+            case ItemType.Arrow:
+            case ItemType.Quiver:
             default:
                 return false;
         }

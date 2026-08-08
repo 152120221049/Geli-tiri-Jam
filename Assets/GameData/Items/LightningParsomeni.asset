@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fff87811ae0b812418c54195e1868f5c, type: 3}
+  m_Name: LightningParsomeni
+  m_EditorClassIdentifier: Assembly-CSharp::ItemSO
+  itemName: "Lightning Par\u015F\xF6meni"
+  description: "D\xFCz hatta ge\xE7en y\u0131ld\u0131r\u0131m b\xFCy\xFCs\xFC f\u0131rlat\u0131r
+    (40 Hasar). (1x1)"
+  icon: {fileID: 0}
+  gridWidth: 1
+  gridHeight: 1
+  itemType: 8
+  maxStack: 3
+  maxDurability: 0
+  meleeDamage: 0
+  meleeRange: 1
+  attackCooldown: 0.5
+  swingArcAngle: 60
+  canMeleeAttack: 0
+  isThrowable: 0
+  throwStyle: 0
+  throwDamage: 0
+  pierceCount: 0
+  throwDurabilityCost: 3
+  throwForce: 10
+  armorValue: 0
+  armorSlotType: 0
+  weightAccelTime: 0
+  weightDecelTime: 0
+  maxArrowCapacity: 10
+  spellDamage: 40
+  spellAoeRadius: 0
+  chainCount: 0
+  spellRange: 8
+  appliesSlowOnHit: 0
+  leavesFireArea: 0
+  createsLightOnLand: 0

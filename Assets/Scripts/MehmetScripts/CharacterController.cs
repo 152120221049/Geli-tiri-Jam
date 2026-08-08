@@ -128,12 +128,40 @@ namespace MemoScripts
             isRunning = isRunning && Mathf.Abs(horizontalInput) > 0.01f;
         }
 
+        private float smoothedVelocityX = 0f;
+
         private void FixedUpdate()
         {
-            // Hareket hesaplama (Y ekseni yerçekimi/fizik hızını korur)
+            // Hedef hız hesapla
             float targetSpeed = isRunning ? runSpeed : walkSpeed;
+            float targetVelocityX = horizontalInput * targetSpeed;
+
+            // Zırh ağırlık eğrisi uygula (PlayerArmorSystem varsa)
+            float accelTime = 0.05f;
+            float decelTime = 0.05f;
+
+            if (PlayerArmorSystem.Instance != null)
+            {
+                accelTime = PlayerArmorSystem.Instance.CurrentAccelTime;
+                decelTime = PlayerArmorSystem.Instance.CurrentDecelTime;
+            }
+
+            // Hızlanma mı yavaşlama mı?
+            float smoothTime;
+            if (Mathf.Abs(targetVelocityX) > Mathf.Abs(smoothedVelocityX))
+                smoothTime = Mathf.Max(accelTime, 0.01f); // Hızlanma
+            else
+                smoothTime = Mathf.Max(decelTime, 0.01f); // Yavaşlama
+
+            // Yumuşak geçiş (Lerp)
+            smoothedVelocityX = Mathf.Lerp(smoothedVelocityX, targetVelocityX, Time.fixedDeltaTime / smoothTime);
+
+            // Çok küçük değerleri sıfırla (titreşimi önle)
+            if (Mathf.Abs(smoothedVelocityX) < 0.01f && Mathf.Abs(targetVelocityX) < 0.01f)
+                smoothedVelocityX = 0f;
+
             Vector2 velocity = rb.linearVelocity;
-            velocity.x = horizontalInput * targetSpeed;
+            velocity.x = smoothedVelocityX;
             rb.linearVelocity = velocity;
         }
 
