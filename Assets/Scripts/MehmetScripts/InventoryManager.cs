@@ -302,6 +302,7 @@ public class InventoryManager : MonoBehaviour
         InventoryGrid.RemoveItem(item);
         HotbarGrid.RemoveItem(item);
         OnItemRemoved?.Invoke(item);
+        NotifyInventoryChanged();
     }
 
     /// <summary>Eşyayı dünyada oyuncunun yakınına yere atar (WorldItem olarak spawn eder).</summary>
@@ -326,6 +327,7 @@ public class InventoryManager : MonoBehaviour
         sr.sortingOrder = 5;
 
         BoxCollider2D col = worldItemObj.AddComponent<BoxCollider2D>();
+        col.size = new Vector2(1f, 1f);
         col.isTrigger = true;
 
         WorldItem wItem = worldItemObj.AddComponent<WorldItem>();

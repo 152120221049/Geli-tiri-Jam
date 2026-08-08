@@ -132,6 +132,7 @@ public class ThrownWeapon : MonoBehaviour
         sr.sortingOrder = 5;
 
         BoxCollider2D col = worldItemObj.AddComponent<BoxCollider2D>();
+        col.size = new Vector2(1f, 1f);
         col.isTrigger = true;
 
         WorldItem wItem = worldItemObj.AddComponent<WorldItem>();

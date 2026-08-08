@@ -3,7 +3,10 @@ using System.Collections.Generic;
 
 public class Enemy : MonoBehaviour
 {
-    [Header("Settings")]
+    [Header("Data (Scriptable Object)")]
+    public EnemyTypeSO enemyDataSO;
+
+    [Header("Settings (SO atanmazsa burası geçerli)")]
     public int enemyType = 1;
     public int health = 100;
     public float damage = 10f;
@@ -35,6 +38,24 @@ public class Enemy : MonoBehaviour
 
     void Start()
     {
+        if (enemyDataSO != null)
+        {
+            enemyType = enemyDataSO.enemyType;
+            health = enemyDataSO.health;
+            damage = enemyDataSO.damage;
+            minSpeed = enemyDataSO.minSpeed;
+            maxSpeed = enemyDataSO.maxSpeed;
+            attackCooldown = enemyDataSO.attackCooldown;
+            attackDistance = enemyDataSO.attackDistance;
+            
+            if (enemyDataSO.animationTriggers != null && enemyDataSO.animationTriggers.Count > 0)
+            {
+                animationTriggers = new List<string>(enemyDataSO.animationTriggers);
+            }
+            
+            gameObject.name = enemyDataSO.enemyName;
+        }
+
         currentSpeed = Random.Range(minSpeed, maxSpeed);
         targetSpeed = currentSpeed;
         speedTimer = Random.Range(1f, 3f);
@@ -220,6 +241,12 @@ public class Enemy : MonoBehaviour
         }
         
         Debug.Log(gameObject.name + " Oyuncuya " + damage + " hasar verdi!");
+
+        PlayerHealth playerHealth = playerObj.GetComponent<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            playerHealth.TakeDamage(damage);
+        }
     }
 
     public void TakeDamage(int damageAmount)
