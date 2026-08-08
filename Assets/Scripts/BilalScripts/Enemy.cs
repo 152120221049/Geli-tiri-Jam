@@ -19,7 +19,7 @@ public class Enemy : MonoBehaviour
     void Start()
     {
         // Başlangıç hızı
-        currentSpeed = Random.Range;
+        currentSpeed = Random.Range(4f, 10f);
         targetSpeed = currentSpeed;
         speedTimer = Random.Range(1f, 3f);
 
@@ -66,7 +66,7 @@ public class Enemy : MonoBehaviour
 
             if (knockbackTimer <= 0)
             {
-                currentSpeed = Random.Range;
+                currentSpeed = Random.Range(4f, 10f);
                 targetSpeed = currentSpeed;
                 speedTimer = Random.Range(1f, 3f);
             }
@@ -76,7 +76,7 @@ public class Enemy : MonoBehaviour
             speedTimer -= Time.fixedDeltaTime;
             if (speedTimer <= 0)
             {
-                targetSpeed = Random.Range;
+                targetSpeed = Random.Range(4f, 10f);
                 speedTimer = Random.Range(1f, 3f);
             }
             currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.fixedDeltaTime * 2f);
