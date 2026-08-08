@@ -70,10 +70,23 @@ namespace MemoScripts
             UpdateAnimator();
         }
 
+        [Header("Envanter Etkileşimi")]
+        [Tooltip("Envanter açıkken karakterin hareket etmesini engelle")]
+        [SerializeField] private bool blockMovementWhenInventoryIsOpen = true;
+
         private void ReadInput()
         {
             horizontalInput = 0f;
             isRunning = false;
+
+            // Envanter açıkken veya açılmak için tuşa basılı tutulurken hareketi durdur
+            if (blockMovementWhenInventoryIsOpen && InventoryManager.Instance != null)
+            {
+                if (InventoryManager.Instance.IsInventoryOpen || InventoryManager.Instance.IsHoldingToOpen)
+                {
+                    return;
+                }
+            }
 
 #if ENABLE_INPUT_SYSTEM
             // Yeni Input System (Keyboard & Gamepad)
