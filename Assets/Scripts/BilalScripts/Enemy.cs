@@ -41,9 +41,9 @@ public class Enemy : MonoBehaviour
             // Süre bittiğinde tekrar normal hıza dönmek için ayarla
             if (knockbackTimer <= 0)
             {
-                speed = Random.Range(3f, 6f);
+                speed = Random.Range(4f, 6.5f);
                 targetSpeed = speed;
-                speedTimer = Random.Range(1f, 3f);
+                speedTimer = Random.Range(2f, 4f);
             }
         }
         else
@@ -52,9 +52,9 @@ public class Enemy : MonoBehaviour
             speedTimer -= Time.deltaTime;
             if (speedTimer <= 0)
             {
-                // Süre dolduğunda yeni bir hedef hız (3 ile 6 arası) ve yeni bir bekleme süresi belirle
-                targetSpeed = Random.Range(4f, 6f);
-                speedTimer = Random.Range(1f, 3f); // 1-3 saniye arasında bir süre bekle
+                // Süre dolduğunda yeni bir hedef hız (4 ile 6 arası) ve yeni bir bekleme süresi belirle
+                targetSpeed = Random.Range(4f, 6.5f);
+                speedTimer = Random.Range(2f, 4f); // 2-4 saniye arasında bir süre bekle
             }
 
             // Mevcut hızı hedef hıza doğru yumuşak (smooth) bir şekilde değiştir
@@ -65,6 +65,14 @@ public class Enemy : MonoBehaviour
         if (player != null)
         {
             transform.position = Vector3.MoveTowards(transform.position, player.position, speed * Time.deltaTime);
+
+            // Eğer bir düşmanla çarpışıp üstüne çıkma durumu tetiklendiyse Y ekseninde yumuşakça yüksel
+            if (climbAmount > 0)
+            {
+                transform.position += new Vector3(0, climbAmount * Time.deltaTime, 0);
+                // Tırmanma etkisini zamanla yavaşça azalt (pürüzsüz bir bitiş için)
+                climbAmount = Mathf.Lerp(climbAmount, 0f, Time.deltaTime * 5f);
+            }
         }
     }
 
