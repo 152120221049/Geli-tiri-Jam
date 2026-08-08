@@ -8,6 +8,7 @@ TagManager:
   - NormalEnemies
   - InvisibleEnemies
   - Destructiables
+  - Enemy
   layers:
   - Default
   - TransparentFX

@@ -48,22 +48,24 @@ namespace MemoScripts
 
             if (boxCollider2D == null) boxCollider2D = GetComponent<BoxCollider2D>();
 
-            // BoxCollider2D alanını (X * Y) hesapla
             Bounds bounds = boxCollider2D.bounds;
-            float area = bounds.size.x * bounds.size.y;
 
-            // Kamera görüş alanı ile karşılaştırma (Kamera kutudan büyükse de küçük bölge sayılır)
+            // Kamera görüş alanı ile karşılaştırma:
+            // Eğer kutu en az bir boyutta (genişlik veya yükseklik) kameradan büyükse oyuncuyu takip etmelidir.
             if (cam != null && cam.orthographic)
             {
                 float camHeight = cam.orthographicSize * 2f;
                 float camWidth = camHeight * cam.aspect;
 
-                if (bounds.size.x <= camWidth + 0.1f || bounds.size.y <= camHeight + 0.1f)
+                if (bounds.size.x > camWidth + 0.1f || bounds.size.y > camHeight + 0.1f)
                 {
-                    return true;
+                    return false; // Takip yapılmalı (Büyük bölge)
                 }
+
+                return true; // Hem X hem Y kameradan küçük/eşitse kilitlen (Küçük bölge)
             }
 
+            float area = bounds.size.x * bounds.size.y;
             return area <= smallZoneAreaThreshold;
         }
 

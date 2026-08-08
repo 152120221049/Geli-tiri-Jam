@@ -1,0 +1,16 @@
+{
+    "Alchemist":{
+        "npcDialog": {
+            "1": "Ölmek üzereyim karaciğerimi yediler iksirin var mı?",
+            "2A": "Teşekkürler al bu okları yay bulursan kullanırsın.",
+            "2B": "Hığk..(ölür)",
+            "2C": "Seni pezevenk. Hığk..(ölür)"
+        },
+        "playerDialog": {
+            "1A": "Evet var hemen veriyorum",
+            "1B": "Maalesef yok",
+            "1C": "Bana kadar var"
+        },
+        "reward": "Atesli_ok"
+    }
+}
