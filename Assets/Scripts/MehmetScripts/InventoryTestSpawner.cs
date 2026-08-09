@@ -10,6 +10,10 @@ public class InventoryTestSpawner : MonoBehaviour
     [SerializeField] private bool addTestItemsOnStart = true;
     [SerializeField] private bool addTestItemsOnTPress = true;
 
+    [Header("Özel Test Eşyaları (İsteğe Bağlı - Gerçek ItemSO'larınızı Ekleyebilirsiniz)")]
+    [Tooltip("Eğer buraya kendi oluşturduğunuz ItemSO dosyalarını eklerseniz, kod sahte renkli eşyalar yerine sizin ikonlarınızı kullanır.")]
+    [SerializeField] private System.Collections.Generic.List<ItemSO> customTestItems = new System.Collections.Generic.List<ItemSO>();
+
     private void Start()
     {
         if (InventoryManager.Instance != null)
@@ -57,6 +61,21 @@ public class InventoryTestSpawner : MonoBehaviour
         if (InventoryManager.Instance == null)
         {
             Debug.LogWarning("InventoryTestSpawner: InventoryManager sahnede bulunamadı!");
+            return;
+        }
+
+        // Eğer kullanıcı Inspector'dan özel ItemSO'lar eklediyse onları yükle
+        if (customTestItems != null && customTestItems.Count > 0)
+        {
+            Debug.Log("🧪 [ENVANTER TEST] Özel atanmış gerçek ItemSO'lar yükleniyor...");
+            foreach (var itemSO in customTestItems)
+            {
+                if (itemSO != null)
+                {
+                    InventoryManager.Instance.AddItem(itemSO, 1);
+                }
+            }
+            InventoryManager.Instance.NotifyInventoryChanged();
             return;
         }
 
@@ -145,6 +164,20 @@ public class InventoryTestSpawner : MonoBehaviour
 
     private ItemSO CreateTestSO(string name, string desc, int width, int height, ItemType type, int maxStack = 1, int durability = 0, Color color = default)
     {
+        // Her aşamada öncelikle projede var olan gerçek ItemSO (.asset) dosyasını kontrol et
+        ItemSO existingSO = TryFindExistingSO(name);
+        if (existingSO != null)
+        {
+            // Eğer gerçek SO bulunduysa ama ikonu henüz atanmamışsa geçici desenli ikon ver
+            if (existingSO.icon == null)
+            {
+                if (color == default) color = Color.cyan;
+                existingSO.icon = CreateColoredSprite(color, name);
+            }
+            return existingSO;
+        }
+
+        // Projede var olan SO bulunamazsa geçici SO oluştur
         ItemSO item = ScriptableObject.CreateInstance<ItemSO>();
         item.itemName = name;
         item.description = desc;
@@ -160,6 +193,41 @@ public class InventoryTestSpawner : MonoBehaviour
         return item;
     }
 
+    private ItemSO TryFindExistingSO(string name)
+    {
+#if UNITY_EDITOR
+        // Projedeki tüm ItemSO asset'lerini tarayalım
+        string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ItemSO");
+        foreach (string guid in guids)
+        {
+            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+            ItemSO asset = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemSO>(path);
+            if (asset != null)
+            {
+                if (string.Equals(asset.itemName, name, System.StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(asset.name, name, System.StringComparison.OrdinalIgnoreCase) ||
+                    CleanString(asset.name).Equals(CleanString(name), System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return asset;
+                }
+            }
+        }
+#endif
+        ItemSO res = Resources.Load<ItemSO>("Items/" + name);
+        if (res != null) return res;
+
+        return null;
+    }
+
+    private string CleanString(string str)
+    {
+        if (string.IsNullOrEmpty(str)) return "";
+        return str.Replace("ı", "i").Replace("İ", "I").Replace("ğ", "g").Replace("Ğ", "G")
+                  .Replace("ü", "u").Replace("Ü", "U").Replace("ş", "s").Replace("Ş", "S")
+                  .Replace("ö", "o").Replace("Ö", "O").Replace("ç", "c").Replace("Ç", "C")
+                  .Replace(" ", "").Replace("-", "").Replace("_", "").ToLower();
+    }
+
     private Sprite CreateColoredSprite(Color color, string label)
     {
         int size = 64;
@@ -171,7 +239,12 @@ public class InventoryTestSpawner : MonoBehaviour
             for (int x = 0; x < size; x++)
             {
                 bool isBorder = (x < 3 || x >= size - 3 || y < 3 || y >= size - 3);
-                pixels[y * size + x] = isBorder ? Color.black : color;
+                // İçi boş kalmasın diye çapraz ve iç çerçeve deseni ekle
+                bool isDiagonal = (Mathf.Abs(x - y) <= 1) || (Mathf.Abs(x - (size - y)) <= 1);
+                bool isInnerBorder = (x == 8 || x == size - 9 || y == 8 || y == size - 9);
+
+                Color c = isBorder ? Color.black : ((isDiagonal || isInnerBorder) ? Color.white * 0.9f : color);
+                pixels[y * size + x] = c;
             }
         }
 

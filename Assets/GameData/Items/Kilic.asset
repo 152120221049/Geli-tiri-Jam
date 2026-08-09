@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: "K\u0131l\u0131\xE7"
   description: "Dengeli k\u0131l\u0131\xE7. Kavisli f\u0131rlat\u0131labilir (2 pierce).
     (1x2)"
-  icon: {fileID: 0}
+  icon: {fileID: -4807036555228022335, guid: 0f07500fe569ee743bb3c9ebaceceead, type: 3}
   gridWidth: 1
   gridHeight: 2
   itemType: 1
@@ -32,6 +32,7 @@ MonoBehaviour:
   pierceCount: 2
   throwDurabilityCost: 3
   throwForce: 10
+  staminaCost: 15
   armorValue: 0
   armorSlotType: 0
   weightAccelTime: 0

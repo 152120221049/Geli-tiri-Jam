@@ -10,6 +10,7 @@ TagManager:
   - Destructiables
   - Enemy
   - Alchemist
+  - stunner
   layers:
   - Default
   - TransparentFX

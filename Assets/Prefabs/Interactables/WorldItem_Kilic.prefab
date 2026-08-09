@@ -81,15 +81,15 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: -4807036555228022335, guid: 0f07500fe569ee743bb3c9ebaceceead, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 0.64, y: 0.64}
+  m_Size: {x: 1.54, y: 6.35}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 0
+  m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!61 &4271260266087079851
@@ -130,8 +130,8 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.64, y: 0.64}
-    newSize: {x: 0.64, y: 0.64}
+    oldSize: {x: 1.54, y: 6.35}
+    newSize: {x: 1.54, y: 6.35}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
@@ -152,7 +152,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldItem
   itemData: {fileID: 11400000, guid: 8323eaaf66d69134bbd24e96511b517c, type: 2}
   count: 1
+  currentDurability: -1
   spriteRenderer: {fileID: 0}
   enableFloatingAnimation: 1
   floatSpeed: 3
   floatAmount: 0.15
+  itemParticlePrefab: {fileID: 7272653245091551536, guid: a78481840eb9a1b4fb37fd4a61300481, type: 3}
+  itemParticle: {fileID: 6062864074142421741, guid: a78481840eb9a1b4fb37fd4a61300481, type: 3}

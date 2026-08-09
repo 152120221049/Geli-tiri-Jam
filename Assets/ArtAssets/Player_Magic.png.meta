@@ -1,0 +1,298 @@
+fileFormatVersion: 2
+guid: e31c6c0267ff52a42933e97b85ca5367
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -4749941419983565444
+    second: Player_Magic_0
+  - first:
+      213: -1562244985623926292
+    second: Player_Magic_1
+  - first:
+      213: 3872396064482621599
+    second: Player_Magic_2
+  - first:
+      213: -3359017655192187584
+    second: Player_Magic_3
+  - first:
+      213: 5381292462913713295
+    second: Player_Magic_4
+  - first:
+      213: 6958261600303715104
+    second: Player_Magic_5
+  - first:
+      213: 8771827300945679621
+    second: Player_Magic_6
+  - first:
+      213: 910581344398558494
+    second: Player_Magic_7
+  - first:
+      213: -8435101940240544728
+    second: Player_Magic_8
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WindowsStoreApps
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Player_Magic_0
+      rect:
+        serializedVersion: 2
+        x: 686
+        y: 314
+        width: 205
+        height: 773
+      alignment: 9
+      pivot: {x: 0.39072475, y: 0.5753476}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c7d07fdd171d41eb0800000000000000
+      internalID: -4749941419983565444
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player_Magic_2
+      rect:
+        serializedVersion: 2
+        x: 57
+        y: 314
+        width: 252
+        height: 749
+      alignment: 9
+      pivot: {x: 0.5237052, y: 0.5897254}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f987b1d24b38db530800000000000000
+      internalID: 3872396064482621599
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player_Magic_3
+      rect:
+        serializedVersion: 2
+        x: 420
+        y: 313
+        width: 194
+        height: 749
+      alignment: 9
+      pivot: {x: 0.44611335, y: 0.597701}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 04d010c4d3f5261d0800000000000000
+      internalID: -3359017655192187584
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player_Magic_5
+      rect:
+        serializedVersion: 2
+        x: 945
+        y: 320
+        width: 255
+        height: 749
+      alignment: 9
+      pivot: {x: 0.34772903, y: 0.6076704}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 023185c1f06b09060800000000000000
+      internalID: 6958261600303715104
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player_Magic_6
+      rect:
+        serializedVersion: 2
+        x: 1314
+        y: 323
+        width: 304
+        height: 749
+      alignment: 9
+      pivot: {x: 0.6326398, y: 0.597701}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 505d0ff747acbb970800000000000000
+      internalID: 8771827300945679621
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Player_Magic_7
+      rect:
+        serializedVersion: 2
+        x: 1615
+        y: 314
+        width: 356
+        height: 751
+      alignment: 9
+      pivot: {x: 0.6613404, y: 0.5795434}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e1549f388e803ac00800000000000000
+      internalID: 910581344398558494
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 0b6dc77f363ef244d8f9a4ddeffdad5e
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Player_Magic_0: -4749941419983565444
+      Player_Magic_1: -1562244985623926292
+      Player_Magic_2: 3872396064482621599
+      Player_Magic_3: -3359017655192187584
+      Player_Magic_4: 5381292462913713295
+      Player_Magic_5: 6958261600303715104
+      Player_Magic_6: 8771827300945679621
+      Player_Magic_7: 910581344398558494
+      Player_Magic_8: -8435101940240544728
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

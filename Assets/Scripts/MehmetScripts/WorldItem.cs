@@ -44,6 +44,13 @@ public class WorldItem : MonoBehaviour, IInteractable
         SetupItemParticle();
     }
 
+    private void OnValidate()
+    {
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        UpdateVisuals();
+    }
+
     private void Update()
     {
         // Yerde süzülme animasyonu

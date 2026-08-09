@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 public class Enemy : MonoBehaviour
@@ -62,6 +62,15 @@ public class Enemy : MonoBehaviour
             stunDuration = enemyDataSO.stunDuration;
             
             gameObject.name = enemyDataSO.enemyName;
+        }
+
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>();
+            if (animator == null)
+            {
+                animator = GetComponent<Animator>();
+            }
         }
 
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
@@ -138,8 +147,11 @@ public class Enemy : MonoBehaviour
             stunTimer -= Time.fixedDeltaTime;
             currentSpeed = 0f;
             targetSpeed = 0f;
-            if (enemyType == 3) PlayAnimation(0); // Idle
-            else PlayAnimation(1); // Run
+            
+            if (stunTimer <= 0)
+            {
+                if (animator != null) animator.speed = 1f; // Stun bitince animasyon devam etsin
+            }
             return;
         }
 
@@ -158,8 +170,8 @@ public class Enemy : MonoBehaviour
         if (knockbackTimer > 0)
         {
             knockbackTimer -= Time.fixedDeltaTime;
-            currentSpeed = -2f;
-            targetSpeed = -2f;
+            currentSpeed = 0f; // Attack sırasında olduğu yerde dursun
+            targetSpeed = 0f;
 
             if (knockbackTimer <= 0)
             {
@@ -237,6 +249,7 @@ public class Enemy : MonoBehaviour
         if (obj.CompareTag("stunner"))
         {
             stunTimer = stunDuration;
+            if (animator != null) animator.speed = 0f; // Stun yediğinde animasyonu durdur
             Destroy(obj);
             Debug.Log(gameObject.name + " " + stunDuration + " saniye sersemledi!");
         }
@@ -282,7 +295,7 @@ public class Enemy : MonoBehaviour
     {
         if (enemyType != 3) 
         {
-            knockbackTimer = 1f; // Yenilmez bossta geri tepme yok
+            knockbackTimer = 2f; // 2 saniye saldırı molası (duracak)
         }
         
         Debug.Log(gameObject.name + " Oyuncuya " + damage + " hasar verdi!");
@@ -306,6 +319,7 @@ public class Enemy : MonoBehaviour
         health -= damageAmount;
         Debug.Log(gameObject.name + " " + damageAmount + " hasar aldı! Kalan can: " + health);
         
+        if (animator != null) animator.speed = 1f; // Hasar yediğinde animasyon donuk kalmasın oynasın
         PlayAnimation(3); // TakeDamage animasyonu
 
         if (spriteRenderer != null)
@@ -332,6 +346,7 @@ public class Enemy : MonoBehaviour
     private void Die()
     {
         Debug.Log(gameObject.name + " öldü!");
+        if (animator != null) animator.speed = 1f; // Ölüm animasyonu donuk kalmasın
         PlayAnimation(4); // Die animasyonu
         Destroy(gameObject, 0.5f); // Animasyonun oynaması için biraz bekle
     }
