@@ -136,7 +136,7 @@ public class ThrownWeapon : MonoBehaviour
         col.isTrigger = true;
 
         WorldItem wItem = worldItemObj.AddComponent<WorldItem>();
-        wItem.Setup(weaponItemData, 1);
+        wItem.Setup(weaponItemData, 1, remainingDurability);
 
         Debug.Log($"🗡️ [SİLAH DÜŞTÜ] {weaponItemData.itemName} yere düştü (Kalan Dayanıklılık: {remainingDurability})");
 
@@ -146,11 +146,41 @@ public class ThrownWeapon : MonoBehaviour
     private void SpawnLightSource(Vector2 position)
     {
         GameObject lightObj = new GameObject("CandleLight");
-        lightObj.transform.position = position;
+        lightObj.transform.position = new Vector3(position.x, position.y, -0.5f);
 
+        // 2D URP Light2D or Point Light
+        bool light2DAdded = false;
+        var light2DType = System.Type.GetType("UnityEngine.Rendering.Universal.Light2D, Unity.RenderPipelines.Universal.Runtime");
+        if (light2DType != null)
+        {
+            var l2d = lightObj.AddComponent(light2DType);
+            if (l2d != null)
+            {
+                var lightTypeProp = light2DType.GetProperty("lightType");
+                var colorProp = light2DType.GetProperty("color");
+                var intensityProp = light2DType.GetProperty("intensity");
+                var pointRadiusProp = light2DType.GetProperty("pointLightOuterRadius");
+
+                if (colorProp != null) colorProp.SetValue(l2d, new Color(1f, 0.75f, 0.35f));
+                if (intensityProp != null) intensityProp.SetValue(l2d, 2.0f);
+                if (pointRadiusProp != null) pointRadiusProp.SetValue(l2d, 5.0f);
+                light2DAdded = true;
+            }
+        }
+
+        if (!light2DAdded)
+        {
+            Light pLight = lightObj.AddComponent<Light>();
+            pLight.type = LightType.Point;
+            pLight.color = new Color(1f, 0.75f, 0.35f);
+            pLight.range = 6.0f;
+            pLight.intensity = 2.5f;
+        }
+
+        // Görsel Hale Efekti
         int size = 32;
         Texture2D tex = new Texture2D(size, size);
-        Color lightColor = new Color(1f, 0.9f, 0.4f, 0.4f);
+        Color lightColor = new Color(1f, 0.85f, 0.4f, 0.4f);
         Color[] pixels = new Color[size * size];
         float center = size / 2f;
         for (int y = 0; y < size; y++)
@@ -169,7 +199,7 @@ public class ThrownWeapon : MonoBehaviour
         sr.sortingOrder = 4;
         lightObj.transform.localScale = Vector3.one * 3f;
 
-        Debug.Log($"🕯️ [IŞIK] Mum ışığı oluşturuldu: {position}");
+        Debug.Log($"🕯️ [IŞIK] 2D Point Light mum ışığı oluşturuldu: {position}");
         Destroy(lightObj, 30f);
     }
 }

@@ -42,6 +42,24 @@ public class InventoryItem
             currentDurability = 0; // Dayanıklılık yok
     }
 
+    public InventoryItem(ItemSO data, int stack, int durability)
+    {
+        itemData = data;
+        currentStack = Mathf.Min(stack, data.maxStack);
+        isRotated = false;
+        gridX = -1;
+        gridY = -1;
+
+        if (durability >= 0 || durability == -1)
+            currentDurability = durability;
+        else if (data.HasDurability)
+            currentDurability = data.maxDurability;
+        else if (data.IsInfinite)
+            currentDurability = -1;
+        else
+            currentDurability = 0;
+    }
+
     /// <summary>Döndürme durumuna göre efektif genişlik.</summary>
     public int EffectiveWidth => itemData.EffectiveWidth(isRotated);
 

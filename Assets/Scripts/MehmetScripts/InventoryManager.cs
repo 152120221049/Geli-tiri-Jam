@@ -136,6 +136,7 @@ public class InventoryManager : MonoBehaviour
     {
         if (IsInventoryOpen) return;
         IsInventoryOpen = true;
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayInventoryOpen();
         OnInventoryToggled?.Invoke();
     }
 
@@ -144,6 +145,7 @@ public class InventoryManager : MonoBehaviour
     {
         if (!IsInventoryOpen) return;
         IsInventoryOpen = false;
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayInventoryClose();
         OnInventoryToggled?.Invoke();
 
         if (ItemTooltipUI.Instance != null)
@@ -380,6 +382,14 @@ public class InventoryManager : MonoBehaviour
     /// <returns>Ekleme başarılı mı.</returns>
     public bool AddItem(ItemSO itemData, int amount = 1)
     {
+        if (itemData == null) return false;
+
+        if (PlayerArmorSystem.Instance != null && !PlayerArmorSystem.Instance.CanAddArmorItem(itemData))
+        {
+            Debug.LogWarning($"🛡️ [{itemData.itemName}] Envanterinizde zaten aynı tür zırh/kalkan var!");
+            return false;
+        }
+
         int remaining = amount;
 
         // 1) Mevcut istiflere eklemeyi dene
@@ -419,6 +429,36 @@ public class InventoryManager : MonoBehaviour
 
         OnInventoryChanged?.Invoke();
         return true;
+    }
+
+    /// <summary>
+    /// Hazır bir InventoryItem nesnesini (örneğin dayanıklılığı saklanmış dünya eşyası) envantere ekler.
+    /// </summary>
+    public bool AddItem(InventoryItem newItem)
+    {
+        if (newItem == null || newItem.itemData == null) return false;
+
+        if (PlayerArmorSystem.Instance != null && !PlayerArmorSystem.Instance.CanAddArmorItem(newItem.itemData))
+        {
+            Debug.LogWarning($"🛡️ [{newItem.itemData.itemName}] Envanterinizde zaten aynı tür zırh/kalkan var!");
+            return false;
+        }
+
+        if (HotbarGrid.AutoPlaceItem(newItem))
+        {
+            OnInventoryChanged?.Invoke();
+            return true;
+        }
+
+        if (InventoryGrid.AutoPlaceItem(newItem))
+        {
+            OnInventoryChanged?.Invoke();
+            return true;
+        }
+
+        Debug.LogWarning($"Envanter dolu! {newItem.itemData.itemName} eklenemedi.");
+        OnInventoryChanged?.Invoke();
+        return false;
     }
 
     /// <summary>

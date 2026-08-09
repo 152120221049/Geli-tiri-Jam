@@ -29,6 +29,12 @@ public class PlayerArmorSystem : MonoBehaviour
     [SerializeField] private TMPro.TextMeshProUGUI armorText;
     [SerializeField] private UnityEngine.UI.Text legacyArmorText;
 
+    [Header("Kalkan UI Görseli")]
+    [SerializeField] private UnityEngine.UI.Image armorShieldImage;
+    [SerializeField] private Sprite defaultEmptyShieldSprite;
+    [SerializeField] private Sprite woodenShieldSprite;
+    [SerializeField] private Sprite ironShieldSprite;
+
     /// <summary>Zırh değeri değiştiğinde tetiklenir.</summary>
     public event System.Action<int> OnArmorChanged;
 
@@ -67,31 +73,57 @@ public class PlayerArmorSystem : MonoBehaviour
     public bool CanAddArmorItem(ItemSO newArmorData)
     {
         if (newArmorData == null) return true;
-        if (newArmorData.itemType != ItemType.Armor) return true;
-        if (newArmorData.armorSlotType == ArmorSlotType.None) return true;
+        if (InventoryManager.Instance == null) return true;
 
-        // Aynı slot tipinde eşya var mı kontrol et
-        ArmorSlotType targetSlot = newArmorData.armorSlotType;
-
-        foreach (var item in InventoryManager.Instance.HotbarGrid.GetAllItems())
+        // 1) Zırh Slot Tipi Kontrolü (Helmet, Chestplate, Leggings)
+        if (newArmorData.itemType == ItemType.Armor && newArmorData.armorSlotType != ArmorSlotType.None)
         {
-            if (item.itemData != null && item.itemData.itemType == ItemType.Armor
-                && item.itemData.armorSlotType == targetSlot
-                && item.itemData != newArmorData)
+            ArmorSlotType targetSlot = newArmorData.armorSlotType;
+
+            foreach (var item in InventoryManager.Instance.HotbarGrid.GetAllItems())
             {
-                Debug.LogWarning($"🛡️ [ZIRH] Zaten bir {targetSlot} zırhınız var! Önce mevcut zırhı çıkarmalısınız.");
-                return false;
+                if (item.itemData != null && item.itemData.itemType == ItemType.Armor
+                    && item.itemData.armorSlotType == targetSlot
+                    && item.itemData != newArmorData)
+                {
+                    Debug.LogWarning($"🛡️ [ZIRH] Zaten bir {targetSlot} zırhınız var! Önce mevcut zırhı çıkarmalısınız.");
+                    return false;
+                }
+            }
+
+            foreach (var item in InventoryManager.Instance.InventoryGrid.GetAllItems())
+            {
+                if (item.itemData != null && item.itemData.itemType == ItemType.Armor
+                    && item.itemData.armorSlotType == targetSlot
+                    && item.itemData != newArmorData)
+                {
+                    Debug.LogWarning($"🛡️ [ZIRH] Zaten bir {targetSlot} zırhınız var! Önce mevcut zırhı çıkarmalısınız.");
+                    return false;
+                }
             }
         }
 
-        foreach (var item in InventoryManager.Instance.InventoryGrid.GetAllItems())
+        // 2) Kalkan Kontrolü (Ahşap Kalkan, Demir Kalkan — Tek tip kalkan taşınabilir)
+        if (newArmorData.itemType == ItemType.Shield)
         {
-            if (item.itemData != null && item.itemData.itemType == ItemType.Armor
-                && item.itemData.armorSlotType == targetSlot
-                && item.itemData != newArmorData)
+            foreach (var item in InventoryManager.Instance.HotbarGrid.GetAllItems())
             {
-                Debug.LogWarning($"🛡️ [ZIRH] Zaten bir {targetSlot} zırhınız var! Önce mevcut zırhı çıkarmalısınız.");
-                return false;
+                if (item.itemData != null && item.itemData.itemType == ItemType.Shield
+                    && item.itemData != newArmorData)
+                {
+                    Debug.LogWarning($"🛡️ [KALKAN] Zaten bir kalkanınız var! Tek bir kalkan taşıyabilirsiniz.");
+                    return false;
+                }
+            }
+
+            foreach (var item in InventoryManager.Instance.InventoryGrid.GetAllItems())
+            {
+                if (item.itemData != null && item.itemData.itemType == ItemType.Shield
+                    && item.itemData != newArmorData)
+                {
+                    Debug.LogWarning($"🛡️ [KALKAN] Zaten bir kalkanınız var! Tek bir kalkan taşıyabilirsiniz.");
+                    return false;
+                }
             }
         }
 
@@ -141,6 +173,42 @@ public class PlayerArmorSystem : MonoBehaviour
             armorText.text = $"Zırh: {TotalArmorValue}";
         if (legacyArmorText != null)
             legacyArmorText.text = $"Zırh: {TotalArmorValue}";
+
+        // Kalkan Görseli Güncellemesi
+        if (armorShieldImage != null)
+        {
+            InventoryItem activeShield = null;
+            foreach (var item in allItems)
+            {
+                if (item.itemData != null && item.itemData.itemType == ItemType.Shield)
+                {
+                    activeShield = item;
+                    break;
+                }
+            }
+
+            if (activeShield == null)
+            {
+                if (defaultEmptyShieldSprite != null)
+                    armorShieldImage.sprite = defaultEmptyShieldSprite;
+            }
+            else
+            {
+                string sName = activeShield.itemData.itemName;
+                if (sName.Contains("Ahşap") && woodenShieldSprite != null)
+                {
+                    armorShieldImage.sprite = woodenShieldSprite;
+                }
+                else if (sName.Contains("Demir") && ironShieldSprite != null)
+                {
+                    armorShieldImage.sprite = ironShieldSprite;
+                }
+                else if (activeShield.itemData.icon != null)
+                {
+                    armorShieldImage.sprite = activeShield.itemData.icon;
+                }
+            }
+        }
 
         OnArmorChanged?.Invoke(TotalArmorValue);
 

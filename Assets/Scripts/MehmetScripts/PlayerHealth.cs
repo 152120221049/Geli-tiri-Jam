@@ -93,12 +93,15 @@ public class PlayerHealth : MonoBehaviour
     //  HASAR & İYİLEŞME
     // ═══════════════════════════════════════════
 
+    /// <summary>Dash vb. aksiyonlarda geçici hasar dokunulmazlığı (i-Frames).</summary>
+    public bool IsInvincible { get; set; } = false;
+
     /// <summary>
     /// Oyuncuya hasar verir. Önce zırh canından, sonra temel candan düşer.
     /// </summary>
     public void TakeDamage(float damage)
     {
-        if (IsDead || damage <= 0f) return;
+        if (IsDead || damage <= 0f || IsInvincible) return;
 
         float remaining = damage;
 
@@ -125,7 +128,12 @@ public class PlayerHealth : MonoBehaviour
         if (IsDead)
         {
             Debug.Log("💀 [ÖLÜM] Oyuncu öldü!");
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayPlayerDeath();
             OnDeath?.Invoke();
+        }
+        else
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayPlayerHurt();
         }
     }
 
