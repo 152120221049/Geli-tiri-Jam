@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemSO
   itemName: "Ah\u015Fap Kalkan"
   description: Envanterde bulununca pasif +5 Armor (can) verir. (2x2)
-  icon: {fileID: 0}
+  icon: {fileID: -5086224262509485405, guid: c73de2043eb23274191404ee0c8044e8, type: 3}
   gridWidth: 2
   gridHeight: 2
   itemType: 6
@@ -31,6 +31,7 @@ MonoBehaviour:
   pierceCount: 0
   throwDurabilityCost: 3
   throwForce: 10
+  staminaCost: 15
   armorValue: 5
   armorSlotType: 0
   weightAccelTime: 0.15

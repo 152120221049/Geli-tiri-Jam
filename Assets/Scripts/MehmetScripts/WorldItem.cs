@@ -11,12 +11,17 @@ public class WorldItem : MonoBehaviour, IInteractable
     [Header("Eşya Bilgisi")]
     public ItemSO itemData;
     [Min(1)] public int count = 1;
+    public int currentDurability = -1;
 
     [Header("Animasyon & Görsel")]
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private bool enableFloatingAnimation = true;
     [SerializeField] private float floatSpeed = 3.0f;
     [SerializeField] private float floatAmount = 0.15f;
+
+    [Header("Parçacık Efekti")]
+    [SerializeField] private GameObject itemParticlePrefab;
+    [SerializeField] private ParticleSystem itemParticle;
 
     private Vector3 initialPosition;
 
@@ -36,6 +41,7 @@ public class WorldItem : MonoBehaviour, IInteractable
     private void Start()
     {
         UpdateVisuals();
+        SetupItemParticle();
     }
 
     private void Update()
@@ -58,13 +64,51 @@ public class WorldItem : MonoBehaviour, IInteractable
     }
 
     /// <summary>
+    /// ItemParticle prefab'ını yükler, uydurur ve çalıştırır.
+    /// </summary>
+    private void SetupItemParticle()
+    {
+        if (itemParticle == null)
+            itemParticle = GetComponentInChildren<ParticleSystem>();
+
+        if (itemParticle == null)
+        {
+            GameObject pPrefab = itemParticlePrefab;
+            if (pPrefab == null)
+            {
+#if UNITY_EDITOR
+                pPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/MemoPrefabs/ItemParticle.prefab");
+#endif
+                if (pPrefab == null)
+                    pPrefab = Resources.Load<GameObject>("ItemParticle");
+            }
+
+            if (pPrefab != null)
+            {
+                GameObject pObj = Instantiate(pPrefab, transform);
+                pObj.transform.localPosition = Vector3.zero;
+                itemParticle = pObj.GetComponent<ParticleSystem>();
+                if (itemParticle == null)
+                    itemParticle = pObj.GetComponentInChildren<ParticleSystem>();
+            }
+        }
+
+        if (itemParticle != null && !itemParticle.isPlaying)
+        {
+            itemParticle.Play();
+        }
+    }
+
+    /// <summary>
     /// Eşyayı ayarlar ve görselini günceller (Dinamik yer eşyası spawn etmek için).
     /// </summary>
-    public void Setup(ItemSO data, int amount = 1)
+    public void Setup(ItemSO data, int amount = 1, int durability = -1)
     {
         itemData = data;
         count = amount;
+        currentDurability = durability;
         UpdateVisuals();
+        SetupItemParticle();
     }
 
     // ═══════════════════════════════════════════
@@ -86,11 +130,21 @@ public class WorldItem : MonoBehaviour, IInteractable
     {
         if (itemData == null || InventoryManager.Instance == null) return;
 
-        bool added = InventoryManager.Instance.AddItem(itemData, count);
+        bool added = false;
+        if (currentDurability != -1)
+        {
+            InventoryItem invItem = new InventoryItem(itemData, count, currentDurability);
+            added = InventoryManager.Instance.AddItem(invItem);
+        }
+        else
+        {
+            added = InventoryManager.Instance.AddItem(itemData, count);
+        }
 
         if (added)
         {
-            Debug.Log($"📦 [DÜNYA EŞYASI] {itemData.itemName} x{count} toplandı!");
+            Debug.Log($"📦 [DÜNYA EŞYASI] {itemData.itemName} x{count} toplandı! (Dayanıklılık: {currentDurability})");
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayItemPickup();
             Destroy(gameObject);
         }
         else

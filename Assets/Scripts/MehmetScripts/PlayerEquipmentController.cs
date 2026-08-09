@@ -58,8 +58,40 @@ public class PlayerEquipmentController : MonoBehaviour
 
     // Bekleme süresi (Cooldown)
     private float lastAttackTime;
+    private float attackFreezeEndTime;
     private bool isAimingToThrow = false;
     private InventoryItem aimingItem = null;
+
+    /// <summary>Saldırı veya nişan alma esnasında oyuncunun hareketi durdurulsun mu?</summary>
+    public bool IsAttackingOrAiming => isAimingToThrow || Time.time < attackFreezeEndTime;
+
+    /// <summary>Saldırı yapıldığında belirtilen süre boyunca hareketi dondurur.</summary>
+    public void TriggerAttackFreeze(float duration = 0.3f)
+    {
+        attackFreezeEndTime = Time.time + duration;
+    }
+
+    private float originalThrowSpawnPointX = 0f;
+    private bool hasRecordedSpawnPointX = false;
+
+    /// <summary>
+    /// Karakter sağa/sola döndüğünde throwSpawnPoint noktasının X pozisyonunu karaktere simetrik olarak aynalar.
+    /// </summary>
+    public void UpdateFlipDirection(bool isFacingRight)
+    {
+        if (throwSpawnPoint == null) return;
+
+        if (!hasRecordedSpawnPointX)
+        {
+            originalThrowSpawnPointX = Mathf.Abs(throwSpawnPoint.localPosition.x);
+            if (originalThrowSpawnPointX == 0f) originalThrowSpawnPointX = 0.5f;
+            hasRecordedSpawnPointX = true;
+        }
+
+        Vector3 locPos = throwSpawnPoint.localPosition;
+        locPos.x = isFacingRight ? originalThrowSpawnPointX : -originalThrowSpawnPointX;
+        throwSpawnPoint.localPosition = locPos;
+    }
 
     // Sadak (Quiver) verileri — Her Sadak InventoryItem'ı için runtime QuiverData tutar
     private Dictionary<InventoryItem, QuiverData> quiverDataMap = new Dictionary<InventoryItem, QuiverData>();
@@ -176,6 +208,7 @@ public class PlayerEquipmentController : MonoBehaviour
         }
 
         lastAttackTime = Time.time;
+        TriggerAttackFreeze(0.35f);
         ItemSO data = item.itemData;
 
         Vector2 origin = GetAttackOrigin();
@@ -183,6 +216,16 @@ public class PlayerEquipmentController : MonoBehaviour
         Vector2 dir = (mouseWorld - origin).normalized;
 
         Debug.Log($"⚔️ [MELEE] {data.itemName} ile savurma yapıldı! Hasar: {data.meleeDamage}, Menzil: {data.meleeRange}m");
+
+        if (AudioManager.Instance != null)
+        {
+            if (data.itemName.Contains("Hançer")) AudioManager.Instance.PlayDaggerSwing();
+            else if (data.itemName.Contains("Büyük Kılıç")) AudioManager.Instance.PlayGreatswordSwing();
+            else AudioManager.Instance.PlaySwordSwing();
+        }
+
+        // Görsel ve fiziksel savurma hitbox'ı oluştur
+        MeleeHitbox.CreateHitbox(origin, dir, data.meleeRange, data.swingArcAngle, data.meleeDamage, enemyLayer, gameObject, 0.18f);
 
         // Farenin baktığı koniye (arc) düşen düşmanları bul
         Collider2D[] hits = Physics2D.OverlapCircleAll(origin, data.meleeRange, enemyLayer);
@@ -238,6 +281,9 @@ public class PlayerEquipmentController : MonoBehaviour
             return;
         }
 
+        TriggerAttackFreeze(0.35f);
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayBowShoot();
+
         ItemSO arrowType = qData.ConsumeArrow();
         if (arrowType == null)
         {
@@ -284,6 +330,9 @@ public class PlayerEquipmentController : MonoBehaviour
     /// <summary>Can İksiri iç (+HP) ve ardından boş şişeyi fırlat.</summary>
     private void DrinkHealthPotion(InventoryItem item)
     {
+        TriggerAttackFreeze(0.35f);
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayPotionDrink();
+
         if (PlayerHealth.Instance != null)
         {
             PlayerHealth.Instance.Heal(50f);
@@ -323,6 +372,9 @@ public class PlayerEquipmentController : MonoBehaviour
     /// <summary>Patlayıcı İksir / Şişe fırlat.</summary>
     private void ThrowFlask(InventoryItem item)
     {
+        TriggerAttackFreeze(0.35f);
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayItemThrow();
+
         Vector2 origin = GetAttackOrigin();
         Vector2 mouseWorld = AimTrajectoryUI.Instance != null ? AimTrajectoryUI.Instance.GetMouseWorldPosition() : origin + Vector2.right;
         Vector2 dir = (mouseWorld - origin).normalized;
@@ -354,6 +406,12 @@ public class PlayerEquipmentController : MonoBehaviour
     /// <summary>Büyü Parşömeni (Fireball / Lightning) oku ve büyü fırlat.</summary>
     private void CastSpell(InventoryItem item)
     {
+        TriggerAttackFreeze(0.35f);
+        if (AudioManager.Instance != null)
+        {
+            if (item.itemData.itemName.Contains("Lightning")) AudioManager.Instance.PlayLightningSpell();
+            else AudioManager.Instance.PlayFireballExplosion();
+        }
         // Stamina Kontrolü
         if (PlayerStamina.Instance != null && !PlayerStamina.Instance.ConsumeStamina(item.itemData.staminaCost))
             return;
@@ -554,7 +612,7 @@ public class PlayerEquipmentController : MonoBehaviour
         }
     }
 
-    private void CancelAiming()
+    public void CancelAiming()
     {
         isAimingToThrow = false;
         aimingItem = null;

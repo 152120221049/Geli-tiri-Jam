@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: Demir Kalkan
   description: "Envanterde bulununca pasif +12 Armor (can) verir. A\u011F\u0131r
     ivmelenme. (2x2)"
-  icon: {fileID: 0}
+  icon: {fileID: -3274123752456910094, guid: 0382d7fd04956974ab26fcc9a98dc82b, type: 3}
   gridWidth: 2
   gridHeight: 2
   itemType: 6
@@ -32,6 +32,7 @@ MonoBehaviour:
   pierceCount: 0
   throwDurabilityCost: 3
   throwForce: 10
+  staminaCost: 15
   armorValue: 12
   armorSlotType: 0
   weightAccelTime: 0.45

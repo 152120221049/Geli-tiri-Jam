@@ -36,11 +36,36 @@ namespace MemoScripts
 
         private Rigidbody2D rb;
         private float horizontalInput;
+
+        [Header("Dash (Atılma) Ayarları")]
+        [SerializeField] private float baseDashSpeed = 16.0f;
+        [SerializeField] private float baseDashDuration = 0.2f;
+        [SerializeField] private float dashCooldown = 0.8f;
+        [SerializeField] private float baseDashStaminaCost = 20.0f;
+
+        private bool isDashing = false;
+        private float dashTimer = 0f;
+        private float nextDashTime = 0f;
+        private float currentDashSpeed = 16.0f;
+        private Vector2 dashDirection = Vector2.right;
+
+        [Header("Hurtbox / Collider Ayarları")]
+        [SerializeField] private Collider2D hurtboxCollider;
+
+        private Vector2 originalBoxSize;
+        private Vector2 originalBoxOffset;
+        private Vector2 originalCapsuleSize;
+        private Vector2 originalCapsuleOffset;
+        private float originalCircleRadius;
+        private Vector2 originalCircleOffset;
+        private bool hasRecordedColliderDefaults = false;
+
         private bool isRunning;
         private bool isFacingRight = true;
 
+        public bool IsDashing => isDashing;
         public bool IsRunning => isRunning;
-        public float CurrentSpeed => Mathf.Abs(horizontalInput) * (isRunning ? runSpeed : walkSpeed);
+        public float CurrentSpeed => isDashing ? currentDashSpeed : Mathf.Abs(horizontalInput) * (isRunning ? runSpeed : walkSpeed);
 
         private void Awake()
         {
@@ -56,8 +81,23 @@ namespace MemoScripts
             // Girdi okuma (Yeni ve Eski Input System destekli)
             ReadInput();
 
-            // Yön çevirme kontrolü
-            if (horizontalInput > 0.01f && !isFacingRight)
+            // Yön çevirme kontrolü (Nişan alma esnasında fare konumuna göre, normalde hareket yönüne göre)
+            if (PlayerEquipmentController.Instance != null && PlayerEquipmentController.Instance.IsAttackingOrAiming)
+            {
+                if (AimTrajectoryUI.Instance != null)
+                {
+                    Vector2 mouseWorld = AimTrajectoryUI.Instance.GetMouseWorldPosition();
+                    if (mouseWorld.x > transform.position.x + 0.1f && !isFacingRight)
+                    {
+                        Flip();
+                    }
+                    else if (mouseWorld.x < transform.position.x - 0.1f && isFacingRight)
+                    {
+                        Flip();
+                    }
+                }
+            }
+            else if (horizontalInput > 0.01f && !isFacingRight)
             {
                 Flip();
             }
@@ -79,14 +119,30 @@ namespace MemoScripts
             horizontalInput = 0f;
             isRunning = false;
 
-            // Envanter açıkken, açılmak için tuşa basılı tutulurken veya Not okunurken hareketi durdur
+            // Envanter açıkken, açılmak için tuşa basılı tutulurken, Not okunurken veya Saldırılırken hareketi durdur
             if (blockMovementWhenInventoryIsOpen)
             {
                 if ((InventoryManager.Instance != null && (InventoryManager.Instance.IsInventoryOpen || InventoryManager.Instance.IsHoldingToOpen)) ||
-                    (NoteUI.Instance != null && NoteUI.Instance.IsReadingNote))
+                    (NoteUI.Instance != null && NoteUI.Instance.IsReadingNote) ||
+                    (PlayerEquipmentController.Instance != null && PlayerEquipmentController.Instance.IsAttackingOrAiming))
                 {
                     return;
                 }
+            }
+
+            // Dash Kontrolü (Space tuşu)
+            bool dashPressed = false;
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+                dashPressed = true;
+#else
+            if (Input.GetKeyDown(KeyCode.Space))
+                dashPressed = true;
+#endif
+
+            if (dashPressed && !isDashing && Time.time >= nextDashTime)
+            {
+                TryPerformDash();
             }
 
 #if ENABLE_INPUT_SYSTEM
@@ -137,10 +193,87 @@ namespace MemoScripts
             }
         }
 
+        private void TryPerformDash()
+        {
+            // Zırh ağırlık oranı hesapla
+            float weightPenalty = 0f;
+            if (PlayerArmorSystem.Instance != null)
+            {
+                weightPenalty = Mathf.Max(0f, PlayerArmorSystem.Instance.CurrentAccelTime - 0.05f);
+            }
+
+            // Stamina maliyeti ağırlıkla artar (20 base + weightPenalty * 40)
+            float dynamicStaminaCost = baseDashStaminaCost + (weightPenalty * 40f);
+
+            // Stamina kontrolü
+            if (PlayerStamina.Instance != null && !PlayerStamina.Instance.ConsumeStamina(dynamicStaminaCost))
+            {
+                Debug.LogWarning("🔋 [DASH] Yetersiz Stamina! Dash atılamadı.");
+                return;
+            }
+
+            // Ağırlıkla hızı hafifçe azalt
+            currentDashSpeed = Mathf.Max(8.0f, baseDashSpeed - (weightPenalty * 15f));
+
+            // Dash yönü: Giriş yapılan yön veya bakılan yön
+            if (Mathf.Abs(horizontalInput) > 0.01f)
+            {
+                dashDirection = horizontalInput > 0 ? Vector2.right : Vector2.left;
+            }
+            else
+            {
+                dashDirection = isFacingRight ? Vector2.right : Vector2.left;
+            }
+
+            isDashing = true;
+            dashTimer = baseDashDuration;
+            nextDashTime = Time.time + dashCooldown;
+
+            // i-Frames (Geçici dokunulmazlık)
+            if (PlayerHealth.Instance != null)
+            {
+                PlayerHealth.Instance.IsInvincible = true;
+            }
+
+            // Nişan almayı iptal et
+            if (PlayerEquipmentController.Instance != null)
+            {
+                PlayerEquipmentController.Instance.CancelAiming();
+            }
+
+            // Hurtbox'ı %75 küçült (%25 boyuta indir)
+            SetHurtboxShrinkState(true);
+
+            Debug.Log($"💨 [DASH] Dash atıldı! Hız: {currentDashSpeed:F1}, Harcanan Stamina: {dynamicStaminaCost:F1}");
+        }
+
         private float smoothedVelocityX = 0f;
 
         private void FixedUpdate()
         {
+            if (isDashing)
+            {
+                dashTimer -= Time.fixedDeltaTime;
+                Vector2 vel = rb.linearVelocity;
+                vel.x = dashDirection.x * currentDashSpeed;
+                rb.linearVelocity = vel;
+
+                if (dashTimer <= 0f)
+                {
+                    isDashing = false;
+                    smoothedVelocityX = vel.x;
+
+                    // Hurtbox'ı orijinal boyutuna döndür
+                    SetHurtboxShrinkState(false);
+
+                    if (PlayerHealth.Instance != null)
+                    {
+                        PlayerHealth.Instance.IsInvincible = false;
+                    }
+                }
+                return;
+            }
+
             // Hedef hız hesapla
             float targetSpeed = isRunning ? runSpeed : walkSpeed;
             float targetVelocityX = horizontalInput * targetSpeed;
@@ -181,12 +314,17 @@ namespace MemoScripts
             if (useTransformScaleFlip)
             {
                 Vector3 scale = transform.localScale;
-                scale.x *= -1;
+                scale.x = Mathf.Abs(scale.x) * (isFacingRight ? 1f : -1f);
                 transform.localScale = scale;
             }
             else if (spriteRenderer != null)
             {
                 spriteRenderer.flipX = !isFacingRight;
+            }
+
+            if (PlayerEquipmentController.Instance != null)
+            {
+                PlayerEquipmentController.Instance.UpdateFlipDirection(isFacingRight);
             }
         }
 
@@ -202,6 +340,57 @@ namespace MemoScripts
             if (!string.IsNullOrEmpty(isRunningParamName))
             {
                 animator.SetBool(isRunningParamName, isRunning);
+            }
+        }
+
+        private void RecordColliderDefaults()
+        {
+            if (hasRecordedColliderDefaults) return;
+            if (hurtboxCollider == null) hurtboxCollider = GetComponent<Collider2D>();
+            if (hurtboxCollider == null) hurtboxCollider = GetComponentInChildren<Collider2D>();
+
+            if (hurtboxCollider != null)
+            {
+                if (hurtboxCollider is BoxCollider2D box)
+                {
+                    originalBoxSize = box.size;
+                    originalBoxOffset = box.offset;
+                }
+                else if (hurtboxCollider is CapsuleCollider2D cap)
+                {
+                    originalCapsuleSize = cap.size;
+                    originalCapsuleOffset = cap.offset;
+                }
+                else if (hurtboxCollider is CircleCollider2D circ)
+                {
+                    originalCircleRadius = circ.radius;
+                    originalCircleOffset = circ.offset;
+                }
+                hasRecordedColliderDefaults = true;
+            }
+        }
+
+        private void SetHurtboxShrinkState(bool isShrunk)
+        {
+            RecordColliderDefaults();
+            if (hurtboxCollider == null) return;
+
+            float factor = isShrunk ? 0.25f : 1.0f; // %75 küçültme -> %25 boyuta düşürme
+
+            if (hurtboxCollider is BoxCollider2D box)
+            {
+                box.size = new Vector2(originalBoxSize.x, originalBoxSize.y * factor);
+                box.offset = new Vector2(originalBoxOffset.x, originalBoxOffset.y * factor);
+            }
+            else if (hurtboxCollider is CapsuleCollider2D cap)
+            {
+                cap.size = new Vector2(originalCapsuleSize.x, originalCapsuleSize.y * factor);
+                cap.offset = new Vector2(originalCapsuleOffset.x, originalCapsuleOffset.y * factor);
+            }
+            else if (hurtboxCollider is CircleCollider2D circ)
+            {
+                circ.radius = originalCircleRadius * factor;
+                circ.offset = new Vector2(originalCircleOffset.x, originalCircleOffset.y * factor);
             }
         }
     }
