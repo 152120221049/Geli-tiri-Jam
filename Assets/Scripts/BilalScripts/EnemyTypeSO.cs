@@ -15,6 +15,9 @@ public class EnemyTypeSO : ScriptableObject
     public float attackCooldown = 5f;
     public float attackDistance = 3f; // Önündeki alan (saldırı menzili)
 
+    [Header("Stun Settings")]
+    public float stunDuration = 2f;
+
     [Header("Animations")]
     [Tooltip("Sırasıyla: 0: Idle, 1: Run, 2: Attack, 3: TakeDamage, 4: Die")]
     public List<string> animationTriggers = new List<string>();

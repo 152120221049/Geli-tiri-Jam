@@ -28,13 +28,19 @@ public class Enemy : MonoBehaviour
     [Header("Debug - Read Only")]
     public float currentSpeed;
 
+    [Header("Stun Settings")]
+    public float stunDuration = 2f;
+
     private float targetSpeed;
     private float speedTimer;
     private float knockbackTimer = 0f;
+    private float stunTimer = 0f;
     private float climbAmount = 0f;
     private float enemyWidth;
     private float enemyHeight;
     private float lastAttackTime = 0f;
+    private SpriteRenderer spriteRenderer;
+    private Color defaultColor = Color.white;
 
     void Start()
     {
@@ -53,7 +59,19 @@ public class Enemy : MonoBehaviour
                 animationTriggers = new List<string>(enemyDataSO.animationTriggers);
             }
             
+            stunDuration = enemyDataSO.stunDuration;
+            
             gameObject.name = enemyDataSO.enemyName;
+        }
+
+        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+        if (spriteRenderer != null)
+        {
+            defaultColor = spriteRenderer.color;
         }
 
         currentSpeed = Random.Range(minSpeed, maxSpeed);
@@ -114,6 +132,16 @@ public class Enemy : MonoBehaviour
     void FixedUpdate()
     {
         if (player == null) return;
+
+        if (stunTimer > 0)
+        {
+            stunTimer -= Time.fixedDeltaTime;
+            currentSpeed = 0f;
+            targetSpeed = 0f;
+            if (enemyType == 3) PlayAnimation(0); // Idle
+            else PlayAnimation(1); // Run
+            return;
+        }
 
         if (enemyType == 1 || enemyType == 2)
         {
@@ -187,6 +215,8 @@ public class Enemy : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        CheckStunner(collision.gameObject);
+
         if (collision.gameObject.CompareTag("Player"))
         {
             if (enemyType == 1 || enemyType == 2)
@@ -194,6 +224,21 @@ public class Enemy : MonoBehaviour
                 DealDamageToPlayer(collision.gameObject);
                 PlayAnimation(2); // Attack
             }
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D collider)
+    {
+        CheckStunner(collider.gameObject);
+    }
+
+    private void CheckStunner(GameObject obj)
+    {
+        if (obj.CompareTag("stunner"))
+        {
+            stunTimer = stunDuration;
+            Destroy(obj);
+            Debug.Log(gameObject.name + " " + stunDuration + " saniye sersemledi!");
         }
     }
 
@@ -263,9 +308,24 @@ public class Enemy : MonoBehaviour
         
         PlayAnimation(3); // TakeDamage animasyonu
 
+        if (spriteRenderer != null)
+        {
+            StartCoroutine(DamageFlashRoutine());
+        }
+
         if (health <= 0)
         {
             Die();
+        }
+    }
+
+    private System.Collections.IEnumerator DamageFlashRoutine()
+    {
+        spriteRenderer.color = Color.red;
+        yield return new WaitForSeconds(0.15f);
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = defaultColor;
         }
     }
 
@@ -281,6 +341,12 @@ public class Enemy : MonoBehaviour
     {
         if (animator == null) return;
         
+        // Büyük olan hariç (enemyType 3), diğerlerinin idle'ı yok, run'ı var.
+        if (index == 0 && enemyType != 3)
+        {
+            index = 1; // Idle yerine Run oynat.
+        }
+
         if (animationTriggers != null && index >= 0 && index < animationTriggers.Count)
         {
             string animName = animationTriggers[index];

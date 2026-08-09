@@ -13,11 +13,12 @@ MonoBehaviour:
   m_Name: LittleMonster
   m_EditorClassIdentifier: Assembly-CSharp::EnemyTypeSO
   enemyType: 1
-  enemyName: Hell dog
-  health: 100
+  enemyName: LittleMonster
+  health: 5
   damage: 10
   minSpeed: 4
   maxSpeed: 10
   attackCooldown: 5
   attackDistance: 3
+  stunDuration: 3
   animationTriggers: []
