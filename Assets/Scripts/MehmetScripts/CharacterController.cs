@@ -126,6 +126,15 @@ namespace MemoScripts
 
             // Koşmanın geçerli olması için hareket ediliyor olması gerekir
             isRunning = isRunning && Mathf.Abs(horizontalInput) > 0.01f;
+
+            // Stamina kontrolü (20 saniyelik koşu vb.)
+            if (isRunning && PlayerStamina.Instance != null)
+            {
+                if (!PlayerStamina.Instance.DrainStamina(PlayerStamina.Instance.runCostPerSecond))
+                {
+                    isRunning = false;
+                }
+            }
         }
 
         private float smoothedVelocityX = 0f;

@@ -1584,6 +1584,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   maxBaseHealth: 100
   currentBaseHealth: 0
+  healthBarFill: {fileID: 2083725310}
+  armorBarFill: {fileID: 215785163}
 --- !u!114 &566654073
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2325,7 +2327,6 @@ RectTransform:
   - {fileID: 263742041}
   - {fileID: 525294892}
   - {fileID: 532385835}
-  - {fileID: 1591538443}
   - {fileID: 1357384553}
   - {fileID: 2079896562}
   m_Father: {fileID: 0}
@@ -2613,6 +2614,7 @@ RectTransform:
   - {fileID: 1604661355}
   - {fileID: 893929195}
   - {fileID: 552978929}
+  - {fileID: 1591538443}
   m_Father: {fileID: 1067831546}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.35, y: 0.35}
@@ -2710,11 +2712,11 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1975063032}
-  m_Father: {fileID: 1067831546}
+  m_Father: {fileID: 1357384553}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -817, y: 426}
+  m_AnchoredPosition: {x: -145, y: 48}
   m_SizeDelta: {x: 250, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1591538444

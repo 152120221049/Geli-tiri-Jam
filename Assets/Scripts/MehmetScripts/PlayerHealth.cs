@@ -39,11 +39,16 @@ public class PlayerHealth : MonoBehaviour
     public event Action OnDeath;
 
     // ═══════════════════════════════════════════
-    //  PROCEDURAL HEALTH BAR UI
+    //  UI REFERANSLARI
     // ═══════════════════════════════════════════
+    [Header("UI Ayarları")]
+    [Tooltip("Inspector'dan manuel atayabileceğiniz Can Barı")]
+    [SerializeField] private Image healthBarFill;
+
+    [Tooltip("Inspector'dan manuel atayabileceğiniz Zırh/Dayanıklılık Barı")]
+    [SerializeField] private Image armorBarFill;
+
     private GameObject healthBarCanvas;
-    private Image healthBarFill;
-    private Image armorBarFill;
 
     private void Awake()
     {
@@ -59,7 +64,12 @@ public class PlayerHealth : MonoBehaviour
 
     private void Start()
     {
-        CreateHealthBarUI();
+        // Eğer Inspector'dan bar atanmamışsa eski sistemle otomatik oluştur.
+        if (healthBarFill == null)
+        {
+            CreateHealthBarUI();
+        }
+        
         RefreshUI();
 
         // Envanter değişikliklerinde zırh bonusunu yeniden hesapla

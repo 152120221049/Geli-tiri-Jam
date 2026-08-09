@@ -108,6 +108,10 @@ public class ItemSO : ScriptableObject
     [Tooltip("Fırlatma gücü / hızı")]
     public float throwForce = 10f;
 
+    [Header("Stamina Maliyeti")]
+    [Tooltip("Bu eşyayı kullanmanın/saldırmanın stamina bedeli")]
+    public float staminaCost = 15f;
+
     // ═══════════════════════════════════════════
     //  ZIRH & KALKAN
     // ═══════════════════════════════════════════

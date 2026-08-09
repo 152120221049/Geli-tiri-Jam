@@ -200,6 +200,18 @@ public class InventoryManager : MonoBehaviour
                 UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
                 return;
 
+            InventoryItem item = GetActiveHotbarItem();
+            if (item == null || item.itemData == null) return;
+
+            // Bu eşya tipleri PlayerEquipmentController tarafından sol tıkla yönetilir.
+            // Burada da çalıştırırsak ÇİFTE kullanım (iki kez atma vb.) olur.
+            ItemType t = item.itemData.itemType;
+            if (t == ItemType.WeaponTool || t == ItemType.Consumable || 
+                t == ItemType.ThrowableFlask || t == ItemType.SpellScroll || t == ItemType.QuestItem)
+            {
+                return; // PlayerEquipmentController ilgilenecek.
+            }
+
             UseActiveHotbarItem();
         }
     }
@@ -311,8 +323,27 @@ public class InventoryManager : MonoBehaviour
         if (item == null || item.itemData == null) return false;
 
         Transform pTrans = null;
-        GameObject pObj = GameObject.FindGameObjectWithTag("Player");
-        if (pObj != null) pTrans = pObj.transform;
+        
+        // 1. Try to find PlayerEquipmentController (most reliable)
+        if (PlayerEquipmentController.Instance != null)
+        {
+            pTrans = PlayerEquipmentController.Instance.transform;
+        }
+        else
+        {
+            // 2. Try Tag
+            GameObject pObj = GameObject.FindGameObjectWithTag("Player");
+            if (pObj != null) 
+            {
+                pTrans = pObj.transform;
+            }
+            else
+            {
+                // 3. Try CharacterController
+                var controller = FindObjectOfType<MemoScripts.CharacterController>();
+                if (controller != null) pTrans = controller.transform;
+            }
+        }
 
         Vector3 dropPos = (pTrans != null) 
             ? pTrans.position + new Vector3(UnityEngine.Random.Range(-0.6f, 0.6f), 0.2f, 0) 

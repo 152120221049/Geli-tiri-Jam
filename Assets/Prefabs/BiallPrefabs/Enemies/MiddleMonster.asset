@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyTypeSO
   enemyType: 2
   enemyName: MiddleMonster
-  health: 5
-  damage: 10
-  minSpeed: 4
+  health: 100
+  damage: 25
+  minSpeed: 5
   maxSpeed: 10
   attackCooldown: 5
   attackDistance: 3

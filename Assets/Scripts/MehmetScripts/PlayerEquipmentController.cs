@@ -120,6 +120,16 @@ public class PlayerEquipmentController : MonoBehaviour
 
         ItemSO data = activeItem.itemData;
 
+        // 6) Görev Eşyası (Taş, Mum vb.)
+        if (data.itemType == ItemType.QuestItem)
+        {
+            if (data.isThrowable)
+            {
+                ExecuteThrow(activeItem);
+            }
+            return;
+        }
+
         // 1) Yay kullanımı (Bow)
         if (data.itemType == ItemType.WeaponTool && data.itemName.Contains("Yay"))
         {
@@ -159,6 +169,12 @@ public class PlayerEquipmentController : MonoBehaviour
     /// <summary>Yakın dövüş savurması (Kılıç, Sopa, Hançer, Asa, Büyük Kılıç).</summary>
     private void PerformMeleeAttack(InventoryItem item)
     {
+        // Stamina Kontrolü
+        if (PlayerStamina.Instance != null && !PlayerStamina.Instance.ConsumeStamina(item.itemData.staminaCost))
+        {
+            return;
+        }
+
         lastAttackTime = Time.time;
         ItemSO data = item.itemData;
 
@@ -191,6 +207,10 @@ public class PlayerEquipmentController : MonoBehaviour
                 Debug.LogWarning($"💥 {item.itemData.itemName} kırıldı!");
                 InventoryManager.Instance.RemoveItemCompletely(item);
             }
+            else
+            {
+                InventoryManager.Instance.NotifyInventoryChanged();
+            }
         }
     }
 
@@ -212,8 +232,18 @@ public class PlayerEquipmentController : MonoBehaviour
             return;
         }
 
+        // Stamina Kontrolü
+        if (PlayerStamina.Instance != null && !PlayerStamina.Instance.ConsumeStamina(bowItem.itemData.staminaCost))
+        {
+            return;
+        }
+
         ItemSO arrowType = qData.ConsumeArrow();
-        if (arrowType == null) return;
+        if (arrowType == null)
+        {
+            Debug.LogWarning("🏹 Sadak boş! Ok atılamadı.");
+            return;
+        }
 
         Vector2 origin = GetAttackOrigin();
         Vector2 mouseWorld = AimTrajectoryUI.Instance != null ? AimTrajectoryUI.Instance.GetMouseWorldPosition() : origin + Vector2.right;
@@ -243,6 +273,10 @@ public class PlayerEquipmentController : MonoBehaviour
             {
                 Debug.LogWarning($"💥 {bowItem.itemData.itemName} kırıldı!");
                 InventoryManager.Instance.RemoveItemCompletely(bowItem);
+            }
+            else
+            {
+                InventoryManager.Instance.NotifyInventoryChanged();
             }
         }
     }
@@ -280,6 +314,10 @@ public class PlayerEquipmentController : MonoBehaviour
         {
             InventoryManager.Instance.RemoveItemCompletely(item);
         }
+        else
+        {
+            InventoryManager.Instance.NotifyInventoryChanged();
+        }
     }
 
     /// <summary>Patlayıcı İksir / Şişe fırlat.</summary>
@@ -294,24 +332,31 @@ public class PlayerEquipmentController : MonoBehaviour
 
         SpriteRenderer sr = flaskObj.AddComponent<SpriteRenderer>();
         sr.sprite = item.itemData.icon;
-        sr.sortingOrder = 10;
+        sr.sortingOrder = 5;
 
         CircleCollider2D col = flaskObj.AddComponent<CircleCollider2D>();
-        col.radius = 0.2f;
+        col.radius = 0.3f;
 
         ThrowableBottle bottle = flaskObj.AddComponent<ThrowableBottle>();
-        bottle.Launch(dir, 12f, item.itemData);
+        bottle.Launch(dir, item.itemData.throwForce > 0 ? item.itemData.throwForce : 12f, item.itemData);
 
         item.Use();
         if (item.IsEmpty)
         {
             InventoryManager.Instance.RemoveItemCompletely(item);
         }
+        else
+        {
+            InventoryManager.Instance.NotifyInventoryChanged();
+        }
     }
 
     /// <summary>Büyü Parşömeni (Fireball / Lightning) oku ve büyü fırlat.</summary>
     private void CastSpell(InventoryItem item)
     {
+        // Stamina Kontrolü
+        if (PlayerStamina.Instance != null && !PlayerStamina.Instance.ConsumeStamina(item.itemData.staminaCost))
+            return;
         ItemSO data = item.itemData;
         Vector2 origin = GetAttackOrigin();
         Vector2 mouseWorld = AimTrajectoryUI.Instance != null ? AimTrajectoryUI.Instance.GetMouseWorldPosition() : origin + Vector2.right;
@@ -334,6 +379,10 @@ public class PlayerEquipmentController : MonoBehaviour
         if (item.IsEmpty)
         {
             InventoryManager.Instance.RemoveItemCompletely(item);
+        }
+        else
+        {
+            InventoryManager.Instance.NotifyInventoryChanged();
         }
     }
 
@@ -416,6 +465,10 @@ public class PlayerEquipmentController : MonoBehaviour
         if (item == null || item.itemData == null) return;
         ItemSO data = item.itemData;
 
+        // Stamina Kontrolü
+        if (PlayerStamina.Instance != null && !PlayerStamina.Instance.ConsumeStamina(data.staminaCost))
+            return;
+
         Vector2 origin = GetAttackOrigin();
 
         // 0) Yay Atışı (Sadak'tan ok ateşler)
@@ -430,12 +483,18 @@ public class PlayerEquipmentController : MonoBehaviour
         // 1) Silah Fırlatma (Hançer, Kılıç, Küçük Sopa)
         if (data.itemType == ItemType.WeaponTool)
         {
-            int remainingDurability = item.currentDurability - data.throwDurabilityCost;
-            if (remainingDurability <= 0)
+            int remainingDurability = item.currentDurability;
+            if (item.currentDurability != -1) // Sonsuz değilse
             {
-                Debug.LogWarning($"💥 {data.itemName} fırlatılırken parçalandı!");
-                InventoryManager.Instance.RemoveItemCompletely(item);
-                return;
+                remainingDurability -= data.throwDurabilityCost;
+                if (remainingDurability <= 0)
+                {
+                    Debug.LogWarning($"💥 {data.itemName} fırlatılırken parçalandı!");
+                    item.currentStack--;
+                    if (item.currentStack <= 0) InventoryManager.Instance.RemoveItemCompletely(item);
+                    else InventoryManager.Instance.NotifyInventoryChanged();
+                    return;
+                }
             }
 
             GameObject thrownObj = new GameObject($"Thrown_{data.itemName}");
@@ -451,8 +510,16 @@ public class PlayerEquipmentController : MonoBehaviour
             ThrownWeapon weapon = thrownObj.AddComponent<ThrownWeapon>();
             weapon.Launch(dir, data.throwForce, data, remainingDurability, data.throwStyle);
 
-            // Envanterden kaldır (yere düştüğünde toplanabilir WorldItem olacak)
-            InventoryManager.Instance.RemoveItemCompletely(item);
+            // Envanterden 1 adet eksilt (Stackli fırlatma bıçakları vb. için)
+            item.currentStack--;
+            if (item.currentStack <= 0)
+            {
+                InventoryManager.Instance.RemoveItemCompletely(item);
+            }
+            else
+            {
+                InventoryManager.Instance.NotifyInventoryChanged();
+            }
         }
         // 2) Şişe / İksir Fırlatma
         else if (data.itemType == ItemType.ThrowableFlask || data.itemType == ItemType.Consumable)
@@ -479,6 +546,10 @@ public class PlayerEquipmentController : MonoBehaviour
             if (item.IsEmpty)
             {
                 InventoryManager.Instance.RemoveItemCompletely(item);
+            }
+            else
+            {
+                InventoryManager.Instance.NotifyInventoryChanged();
             }
         }
     }

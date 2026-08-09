@@ -62,7 +62,7 @@ public class ThrownWeapon : MonoBehaviour
             transform.rotation = Quaternion.Euler(0, 0, angle);
         }
 
-        Destroy(gameObject, lifetime);
+        Invoke(nameof(StopAndDrop), lifetime);
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -111,7 +111,7 @@ public class ThrownWeapon : MonoBehaviour
         }
 
         // WorldItem olarak yere düşür (toplanabilir)
-        if (dropAsWorldItem && weaponItemData != null && remainingDurability > 0)
+        if (dropAsWorldItem && weaponItemData != null && remainingDurability != 0)
         {
             // Kısa gecikmeyle WorldItem oluştur ve bu mermiyi sil
             Invoke(nameof(SpawnWorldItem), 0.3f);

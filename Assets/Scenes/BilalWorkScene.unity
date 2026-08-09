@@ -1714,6 +1714,9 @@ MonoBehaviour:
   cellSpacing: 5
   activeSlotColor: {r: 1, g: 0.84, b: 0, a: 0.8}
   normalSlotColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.5}
+  validDragColor: {r: 0.2, g: 0.9, b: 0.3, a: 0.9}
+  swapDragColor: {r: 0.3, g: 0.7, b: 1, a: 0.9}
+  invalidDragColor: {r: 0.9, g: 0.2, b: 0.2, a: 0.9}
 --- !u!114 &789095052
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2182,8 +2185,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c40d10ea95727e5499466ae96f3cf9d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
+  enemyDataSO: {fileID: 0}
+  enemyType: 1
+  health: 100
   damage: 10
   player: {fileID: 0}
+  minSpeed: 4
+  maxSpeed: 10
+  attackCooldown: 5
+  attackDistance: 3
+  animator: {fileID: 0}
+  animationTriggers: []
   currentSpeed: 0
 --- !u!212 &979927664
 SpriteRenderer:
@@ -2300,7 +2312,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &985574253
 Transform:
   m_ObjectHideFlags: 0
@@ -4345,8 +4357,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c40d10ea95727e5499466ae96f3cf9d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
+  enemyDataSO: {fileID: 0}
+  enemyType: 1
+  health: 100
   damage: 10
   player: {fileID: 0}
+  minSpeed: 4
+  maxSpeed: 10
+  attackCooldown: 5
+  attackDistance: 3
+  animator: {fileID: 0}
+  animationTriggers: []
   currentSpeed: 0
 --- !u!212 &1967767189
 SpriteRenderer:
