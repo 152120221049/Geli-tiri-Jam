@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -209,6 +209,7 @@ public class PlayerEquipmentController : MonoBehaviour
 
         lastAttackTime = Time.time;
         TriggerAttackFreeze(0.35f);
+        MemoScripts.CharacterController.Instance?.PlayActionAnimation("Player_Attack", 0.35f);
         ItemSO data = item.itemData;
 
         Vector2 origin = GetAttackOrigin();
@@ -282,6 +283,7 @@ public class PlayerEquipmentController : MonoBehaviour
         }
 
         TriggerAttackFreeze(0.35f);
+        MemoScripts.CharacterController.Instance?.PlayActionAnimation("Player_Attack", 0.35f);
         if (AudioManager.Instance != null) AudioManager.Instance.PlayBowShoot();
 
         ItemSO arrowType = qData.ConsumeArrow();
@@ -331,6 +333,7 @@ public class PlayerEquipmentController : MonoBehaviour
     private void DrinkHealthPotion(InventoryItem item)
     {
         TriggerAttackFreeze(0.35f);
+        MemoScripts.CharacterController.Instance?.PlayActionAnimation("Player_Throw", 0.35f);
         if (AudioManager.Instance != null) AudioManager.Instance.PlayPotionDrink();
 
         if (PlayerHealth.Instance != null)
@@ -373,6 +376,7 @@ public class PlayerEquipmentController : MonoBehaviour
     private void ThrowFlask(InventoryItem item)
     {
         TriggerAttackFreeze(0.35f);
+        MemoScripts.CharacterController.Instance?.PlayActionAnimation("Player_Throw", 0.35f);
         if (AudioManager.Instance != null) AudioManager.Instance.PlayItemThrow();
 
         Vector2 origin = GetAttackOrigin();
@@ -407,6 +411,7 @@ public class PlayerEquipmentController : MonoBehaviour
     private void CastSpell(InventoryItem item)
     {
         TriggerAttackFreeze(0.35f);
+        MemoScripts.CharacterController.Instance?.PlayActionAnimation("Player_Magic", 0.4f);
         if (AudioManager.Instance != null)
         {
             if (item.itemData.itemName.Contains("Lightning")) AudioManager.Instance.PlayLightningSpell();
@@ -528,6 +533,7 @@ public class PlayerEquipmentController : MonoBehaviour
             return;
 
         Vector2 origin = GetAttackOrigin();
+        MemoScripts.CharacterController.Instance?.PlayActionAnimation("Player_Throw", 0.35f);
 
         // 0) Yay Atışı (Sadak'tan ok ateşler)
         if (data.itemName.Contains("Yay"))

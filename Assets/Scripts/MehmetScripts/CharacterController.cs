@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -22,6 +22,9 @@ namespace MemoScripts
         [Tooltip("Eski Input Manager kullanılıyorsa koşma tuşu")]
         [SerializeField] private KeyCode runKey = KeyCode.LeftShift;
 
+        [Tooltip("A/D veya Sol/Sağ hareket tuşlarının yönünü tersine çevir (D ile sola, A ile sağa gidiyorsa açın).")]
+        [SerializeField] private bool invertHorizontalInput = false;
+
         [Header("Görsel & Bileşenler")]
         [Tooltip("Karakterin sprite renderer bileşeni (Yön çevirmek için). Boşsa otomatik aranır.")]
         [SerializeField] private SpriteRenderer spriteRenderer;
@@ -29,10 +32,23 @@ namespace MemoScripts
         [Tooltip("Eğer SpriteRenderer kullanmıyorsanız Transform scale ile yön çevir (Sağ için +1, Sol için -1).")]
         [SerializeField] private bool useTransformScaleFlip = false;
 
-        [Header("Animatör Parametreleri (Opsiyonel)")]
+        [Tooltip("Eğer orijinal sprite çizimi varsayılan olarak SOLA bakıyorsa tersine çevirmek için bunu işaretleyin.")]
+        [SerializeField] private bool invertFlip = false;
+
+        [Header("Animatör Parametreleri & State İsimleri")]
         [SerializeField] private Animator animator;
         [SerializeField] private string speedParamName = "Speed";
         [SerializeField] private string isRunningParamName = "IsRunning";
+        [SerializeField] private string idleAnimName = "Player_Idle";
+        [SerializeField] private string walkAnimName = "Player_Walk";
+        [SerializeField] private string dashAnimName = "Player_Dash";
+        [SerializeField] private string attackAnimName = "Player_Attack";
+        [SerializeField] private string magicAnimName = "Player_Magic";
+        [SerializeField] private string throwAnimName = "Player_Throw";
+
+        public static CharacterController Instance { get; private set; }
+        private float actionAnimTimer = 0f;
+        private string currentAnimState = "";
 
         private Rigidbody2D rb;
         private float horizontalInput;
@@ -69,11 +85,23 @@ namespace MemoScripts
 
         private void Awake()
         {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+
             rb = GetComponent<Rigidbody2D>();
             if (spriteRenderer == null)
                 spriteRenderer = GetComponentInChildren<SpriteRenderer>();
             if (animator == null)
                 animator = GetComponentInChildren<Animator>();
+        }
+
+        private void Start()
+        {
+            ApplyFlipVisuals();
         }
 
         private void Update()
@@ -179,6 +207,12 @@ namespace MemoScripts
                 // Eğer Input System paket durum ayarları çakışırsa güvenli geçiş
             }
 #endif
+
+            // Girdi yönünü tersine çevirme kontrolü
+            if (invertHorizontalInput)
+            {
+                horizontalInput = -horizontalInput;
+            }
 
             // Koşmanın geçerli olması için hareket ediliyor olması gerekir
             isRunning = isRunning && Mathf.Abs(horizontalInput) > 0.01f;
@@ -310,16 +344,28 @@ namespace MemoScripts
         private void Flip()
         {
             isFacingRight = !isFacingRight;
+            ApplyFlipVisuals();
+        }
+
+        public void ApplyFlipVisuals()
+        {
+            bool facing = invertFlip ? !isFacingRight : isFacingRight;
 
             if (useTransformScaleFlip)
             {
                 Vector3 scale = transform.localScale;
-                scale.x = Mathf.Abs(scale.x) * (isFacingRight ? 1f : -1f);
+                scale.x = Mathf.Abs(scale.x) * (facing ? -1f : 1f);
                 transform.localScale = scale;
             }
-            else if (spriteRenderer != null)
+            else
             {
-                spriteRenderer.flipX = !isFacingRight;
+                if (spriteRenderer == null)
+                    spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+
+                if (spriteRenderer != null)
+                {
+                    spriteRenderer.flipX = facing;
+                }
             }
 
             if (PlayerEquipmentController.Instance != null)
@@ -328,10 +374,49 @@ namespace MemoScripts
             }
         }
 
+        public void PlayActionAnimation(string animName, float duration = 0.35f)
+        {
+            actionAnimTimer = duration;
+            PlayAnimationState(animName);
+        }
+
+        public void PlayAnimationState(string animName)
+        {
+            if (animator == null || string.IsNullOrEmpty(animName)) return;
+            if (currentAnimState == animName && actionAnimTimer <= 0) return;
+
+            currentAnimState = animName;
+            animator.Play(animName);
+        }
+
         private void UpdateAnimator()
         {
             if (animator == null) return;
 
+            // Aksiyon animasyonları (Attack, Magic, Throw) sürerken walk/idle ezilmesin
+            if (actionAnimTimer > 0)
+            {
+                actionAnimTimer -= Time.deltaTime;
+                return;
+            }
+
+            if (isDashing)
+            {
+                PlayAnimationState(dashAnimName);
+                return;
+            }
+
+            // Hareket durumuna göre Walk veya Idle oynat
+            if (Mathf.Abs(horizontalInput) > 0.01f)
+            {
+                PlayAnimationState(walkAnimName);
+            }
+            else
+            {
+                PlayAnimationState(idleAnimName);
+            }
+
+            // Eski parametre sistemi uyumluluğu
             if (!string.IsNullOrEmpty(speedParamName))
             {
                 animator.SetFloat(speedParamName, Mathf.Abs(horizontalInput));
